@@ -12,7 +12,7 @@ services:
     image: aiptower-server
     restart: unless-stopped
     ports:
-      - "48080:48080"
+      - "48090:48090" # 与 aip-hub(48080) 区分
     env_file:
       - aiptower.env
     environment:

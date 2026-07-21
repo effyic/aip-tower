@@ -16,8 +16,8 @@ ENV JAVA_OPTS="-Xms512m -Xmx512m -Djava.security.egd=file:/dev/./urandom"
 ## 应用参数
 ENV ARGS=""
 
-## 暴露后端项目的 48080 端口
-EXPOSE 48080
+## 暴露后端项目的 48090 端口（与 aip-hub 的 48080 区分）
+EXPOSE 48090
 
 ## 启动后端项目
 CMD java ${JAVA_OPTS} -jar app.jar $ARGS

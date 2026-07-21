@@ -1,5 +1,5 @@
 server:
-  port: 48080
+  port: 48090 # 与 aip-hub(48080) 区分
 
 --- #################### 数据库相关配置 ####################
 # Stage 环境 dev：PostgreSQL 172.16.1.24:15432 / aip_tower_dev

@@ -24,7 +24,7 @@ public class BannerApplicationRunner implements ApplicationRunner {
                             "AIP-Tower 启动成功！\n\t" +
                             "接口文档: \t{} \n" +
                             "----------------------------------------------------------",
-                    "http://localhost:48080/swagger-ui");
+                    "http://localhost:48090/swagger-ui");
 
             // 数据报表
             if (isNotPresent("com.effyic.aiptower.module.report.framework.security.config.SecurityConfiguration")) {

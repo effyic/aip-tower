@@ -1,5 +1,5 @@
 server:
-  port: 48080 # 与 dev 共用端口，同一时刻只启动一个 profile
+  port: 48090 # 与 aip-hub(48080) 区分；同机各 profile 仍共用此端口
 
 --- #################### 数据库相关配置 ####################
 # Stage 环境 demo：172.16.1.23 / aip_tower_demo

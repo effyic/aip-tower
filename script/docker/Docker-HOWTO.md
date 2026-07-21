@@ -36,7 +36,7 @@ docker compose --env-file ../../aiptower.env \
 
 | 服务 | 地址 |
 |------|------|
-| API | http://localhost:48080/admin-api |
+| API | http://localhost:48090/admin-api |
 | 管理端 | http://localhost:8080 |
 
 ## 容器访问宿主机上的中间件

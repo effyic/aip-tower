@@ -15,9 +15,9 @@
 
 ## 🐶 新手必读
 
-* 演示地址【Vue3 + element-plus】：<http://localhost:48080>
-* 演示地址【Vue3 + vben(ant-design-vue)】：<http://localhost:48080>
-* 演示地址【Vue2 + element-ui】：<http://localhost:48080>
+* 演示地址【Vue3 + element-plus】：<http://localhost:48090>
+* 演示地址【Vue3 + vben(ant-design-vue)】：<http://localhost:48090>
+* 演示地址【Vue2 + element-ui】：<http://localhost:48090>
 * 启动文档：<https://effyic.com/quick-start/>
 * 视频教程：<https://effyic.com/video/>
 
@@ -312,7 +312,7 @@
 
 演示地址（Boot）：<https://effyic.com/im-preview/>
 
-演示地址（Vue3 + Element Plus）：<http://localhost:48080>
+演示地址（Vue3 + Element Plus）：<http://localhost:48090>
 
 
 ![功能图](/.image/common/im-feature.png)

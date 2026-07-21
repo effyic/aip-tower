@@ -18,7 +18,7 @@ rtc:
 webhook:
   api_key: devkey
   urls:
-    - http://host.docker.internal:48080/admin-api/im/livekit/webhook
+    - http://host.docker.internal:48090/admin-api/im/livekit/webhook
 
 # 房间无人时多久销毁；秒；之前 PoC 默认 300，给低些方便排查
 room:

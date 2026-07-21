@@ -1,0 +1,3 @@
+com.effyic.aiptower.framework.security.config.AiptowerSecurityAutoConfiguration
+com.effyic.aiptower.framework.security.config.AiptowerWebSecurityConfigurerAdapter
+com.effyic.aiptower.framework.operatelog.config.AiptowerOperateLogConfiguration

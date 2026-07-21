@@ -1,0 +1,31 @@
+# 联调环境共用 DEBUG 日志（默认未启用）。
+# 需要时在 application-dev / application-test 中恢复：
+#   spring.config.import: optional:classpath:application-logging-debug.yaml
+# 或在 application-local.yaml 的 logging.level 下按包开启。
+logging:
+  level:
+    com.effyic.aiptower.module.bpm.dal.mysql: debug
+    com.effyic.aiptower.module.infra.dal.mysql: debug
+    com.effyic.aiptower.module.infra.dal.mysql.logger.ApiErrorLogMapper: INFO
+    com.effyic.aiptower.module.infra.dal.mysql.job.JobLogMapper: INFO
+    com.effyic.aiptower.module.infra.dal.mysql.file.FileConfigMapper: INFO
+    com.effyic.aiptower.module.pay.dal.mysql: debug
+    com.effyic.aiptower.module.pay.dal.mysql.notify.PayNotifyTaskMapper: INFO
+    com.effyic.aiptower.module.system.dal.mysql: debug
+    com.effyic.aiptower.module.system.dal.mysql.sms.SmsChannelMapper: INFO
+    com.effyic.aiptower.module.tool.dal.mysql: debug
+    com.effyic.aiptower.module.member.dal.mysql: debug
+    com.effyic.aiptower.module.trade.dal.mysql: debug
+    com.effyic.aiptower.module.promotion.dal.mysql: debug
+    com.effyic.aiptower.module.statistics.dal.mysql: debug
+    com.effyic.aiptower.module.crm.dal.mysql: debug
+    com.effyic.aiptower.module.erp.dal.mysql: debug
+    com.effyic.aiptower.module.mes.dal.mysql: debug
+    com.effyic.aiptower.module.wms.dal.mysql: debug
+    com.effyic.aiptower.module.iot.dal.mysql: debug
+    com.effyic.aiptower.module.iot.dal.tdengine: DEBUG
+    com.effyic.aiptower.module.iot.service.rule: debug
+    com.effyic.aiptower.module.ai.dal.mysql: debug
+    com.effyic.aiptower.module.im.dal.mysql: debug
+    com.effyic.aiptower.module.cortex: debug
+    org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR

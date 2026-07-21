@@ -1,0 +1,3 @@
+com.effyic.aiptower.framework.mq.redis.config.AiptowerRedisMQProducerAutoConfiguration
+com.effyic.aiptower.framework.mq.redis.config.AiptowerRedisMQConsumerAutoConfiguration
+com.effyic.aiptower.framework.mq.rabbitmq.config.AiptowerRabbitMQAutoConfiguration

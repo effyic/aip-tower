@@ -1,0 +1,2 @@
+com.effyic.aiptower.framework.redis.config.AiptowerRedisAutoConfiguration
+com.effyic.aiptower.framework.redis.config.AiptowerCacheAutoConfiguration

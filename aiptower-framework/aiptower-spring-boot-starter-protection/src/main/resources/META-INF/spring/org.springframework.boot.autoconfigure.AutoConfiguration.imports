@@ -1,0 +1,4 @@
+com.effyic.aiptower.framework.idempotent.config.AiptowerIdempotentConfiguration
+com.effyic.aiptower.framework.lock4j.config.AiptowerLock4jConfiguration
+com.effyic.aiptower.framework.ratelimiter.config.AiptowerRateLimiterConfiguration
+com.effyic.aiptower.framework.signature.config.AiptowerApiSignatureAutoConfiguration

@@ -1,0 +1,3 @@
+com.effyic.aiptower.framework.datasource.config.AiptowerDataSourceAutoConfiguration
+com.effyic.aiptower.framework.mybatis.config.AiptowerMybatisAutoConfiguration
+com.effyic.aiptower.framework.translate.config.AiptowerTranslateAutoConfiguration

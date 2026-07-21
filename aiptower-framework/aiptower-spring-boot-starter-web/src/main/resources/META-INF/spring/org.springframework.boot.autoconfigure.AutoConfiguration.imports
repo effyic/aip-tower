@@ -1,0 +1,7 @@
+com.effyic.aiptower.framework.apilog.config.AiptowerApiLogAutoConfiguration
+com.effyic.aiptower.framework.jackson.config.AiptowerJacksonAutoConfiguration
+com.effyic.aiptower.framework.swagger.config.AiptowerSwaggerAutoConfiguration
+com.effyic.aiptower.framework.web.config.AiptowerWebAutoConfiguration
+com.effyic.aiptower.framework.xss.config.AiptowerXssAutoConfiguration
+com.effyic.aiptower.framework.banner.config.AiptowerBannerAutoConfiguration
+com.effyic.aiptower.framework.encrypt.config.AiptowerApiEncryptAutoConfiguration

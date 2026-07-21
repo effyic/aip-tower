@@ -15,6 +15,7 @@ import com.effyic.aiptower.module.system.dal.dataobject.permission.RoleDO;
 import com.effyic.aiptower.module.system.dal.mysql.permission.RoleMapper;
 import com.effyic.aiptower.module.system.dal.redis.RedisKeyConstants;
 import com.effyic.aiptower.module.system.enums.permission.DataScopeEnum;
+import com.effyic.aiptower.module.system.enums.permission.OpsShadowRoles;
 import com.effyic.aiptower.module.system.enums.permission.RoleCodeEnum;
 import com.effyic.aiptower.module.system.enums.permission.RoleTypeEnum;
 import com.google.common.annotations.VisibleForTesting;
@@ -190,6 +191,11 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    public RoleDO getRoleByCode(String code) {
+        return roleMapper.selectByCode(code);
+    }
+
+    @Override
     @Cacheable(value = RedisKeyConstants.ROLE, key = "#id",
             unless = "#result == null")
     public RoleDO getRoleFromCache(Long id) {
@@ -204,7 +210,8 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public List<RoleDO> getRoleList() {
-        return roleMapper.selectList();
+        return roleMapper.selectList(new com.effyic.aiptower.framework.mybatis.core.query.LambdaQueryWrapperX<RoleDO>()
+                .notLikeRight(RoleDO::getCode, OpsShadowRoles.CODE_PREFIX));
     }
 
     @Override

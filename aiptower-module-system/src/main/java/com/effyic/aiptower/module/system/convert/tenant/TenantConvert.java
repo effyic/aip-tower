@@ -1,6 +1,5 @@
 package com.effyic.aiptower.module.system.convert.tenant;
 
-import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantSaveReqVO;
 import com.effyic.aiptower.module.system.controller.admin.user.vo.user.UserSaveReqVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -15,11 +14,12 @@ public interface TenantConvert {
 
     TenantConvert INSTANCE = Mappers.getMapper(TenantConvert.class);
 
-    default UserSaveReqVO convert02(TenantSaveReqVO bean) {
+    default UserSaveReqVO convert02(String username, String password, String nickname, String mobile) {
         UserSaveReqVO reqVO = new UserSaveReqVO();
-        reqVO.setUsername(bean.getUsername());
-        reqVO.setPassword(bean.getPassword());
-        reqVO.setNickname(bean.getContactName()).setMobile(bean.getContactMobile());
+        reqVO.setUsername(username);
+        reqVO.setPassword(password);
+        reqVO.setNickname(nickname);
+        reqVO.setMobile(mobile);
         return reqVO;
     }
 

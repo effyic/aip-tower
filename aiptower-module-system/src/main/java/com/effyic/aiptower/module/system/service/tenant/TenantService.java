@@ -2,6 +2,8 @@ package com.effyic.aiptower.module.system.service.tenant;
 
 import com.effyic.aiptower.framework.common.pojo.PageResult;
 import com.effyic.aiptower.framework.tenant.core.context.TenantContextHolder;
+import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantAdminAccountRespVO;
+import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantCreateRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantPageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantSaveReqVO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantDO;
@@ -20,12 +22,28 @@ import java.util.Set;
 public interface TenantService {
 
     /**
-     * 创建租户
+     * 创建租户（自动生成创建编号与默认管理员账号）
      *
      * @param createReqVO 创建信息
-     * @return 编号
+     * @return 租户及默认管理员账号信息
      */
-    Long createTenant(@Valid TenantSaveReqVO createReqVO);
+    TenantCreateRespVO createTenant(@Valid TenantSaveReqVO createReqVO);
+
+    /**
+     * 为指定租户生成新的管理员账号（一键创建）
+     *
+     * @param tenantId 租户编号
+     * @return 新管理员账号信息
+     */
+    TenantAdminAccountRespVO generateTenantAdmin(Long tenantId);
+
+    /**
+     * 获得指定租户下的管理员账号列表（含明文初始密码）
+     *
+     * @param tenantId 租户编号
+     * @return 管理员账号列表
+     */
+    List<TenantAdminAccountRespVO> getTenantAdminList(Long tenantId);
 
     /**
      * 更新租户

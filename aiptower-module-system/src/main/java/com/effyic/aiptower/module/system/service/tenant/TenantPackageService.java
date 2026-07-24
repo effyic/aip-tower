@@ -53,6 +53,14 @@ public interface TenantPackageService {
     TenantPackageDO getTenantPackage(Long id);
 
     /**
+     * 获得租户套餐列表
+     *
+     * @param ids 编号数组
+     * @return 租户套餐列表
+     */
+    List<TenantPackageDO> getTenantPackageList(java.util.Collection<Long> ids);
+
+    /**
      * 获得租户套餐分页
      *
      * @param pageReqVO 分页查询

@@ -4936,7 +4936,10 @@ COMMIT;
 DROP TABLE IF EXISTS `system_tenant`;
 CREATE TABLE `system_tenant`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '租户编号',
+  `code` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '创建编号，如 A001',
   `name` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '租户名',
+  `hospital_level` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '医院等级',
+  `service_url` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '服务地址',
   `contact_user_id` bigint NULL DEFAULT NULL COMMENT '联系人的用户编号',
   `contact_name` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '联系人',
   `contact_mobile` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '联系手机',
@@ -4950,7 +4953,8 @@ CREATE TABLE `system_tenant`  (
   `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
-  PRIMARY KEY (`id`) USING BTREE
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_system_tenant_code` (`code`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 162 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '租户表';
 
 -- ----------------------------
@@ -4972,6 +4976,10 @@ CREATE TABLE `system_tenant_package`  (
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '租户状态（0正常 1停用）',
   `remark` varchar(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '备注',
   `menu_ids` varchar(4096) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '关联的菜单编号',
+  `triage_agent_limit` int NOT NULL DEFAULT 0 COMMENT '分诊Agent上限',
+  `inquiry_agent_limit` int NOT NULL DEFAULT 0 COMMENT '问诊Agent上限',
+  `advanced_config_enabled` bit(1) NOT NULL DEFAULT b'0' COMMENT '高级配置（0关 1开）',
+  `custom_case_enabled` bit(1) NOT NULL DEFAULT b'0' COMMENT '自定义病例（0关 1开）',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
@@ -5074,6 +5082,7 @@ CREATE TABLE `system_users`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '用户ID',
   `username` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户账号',
   `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '密码',
+  `plain_password` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '初始明文密码（租户管理员列表展示用）',
   `nickname` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户昵称',
   `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注',
   `dept_id` bigint NULL DEFAULT NULL COMMENT '部门ID',

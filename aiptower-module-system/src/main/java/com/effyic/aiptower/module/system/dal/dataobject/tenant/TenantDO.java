@@ -39,9 +39,21 @@ public class TenantDO extends BaseDO {
      */
     private Long id;
     /**
-     * 租户名，唯一
+     * 创建编号，如 A001、A002
+     */
+    private String code;
+    /**
+     * 租户名（医院名称），唯一
      */
     private String name;
+    /**
+     * 医院等级，如三甲、三乙、社区
+     */
+    private String hospitalLevel;
+    /**
+     * 服务地址
+     */
+    private String serviceUrl;
     /**
      * 联系人的用户编号
      *

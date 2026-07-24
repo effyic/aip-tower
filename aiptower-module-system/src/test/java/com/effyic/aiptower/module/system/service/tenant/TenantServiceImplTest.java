@@ -142,32 +142,36 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
             return true;
         }), eq(RoleTypeEnum.SYSTEM.getType()))).thenReturn(200L);
         // mock 用户 300L
-        when(userService.createUser(argThat(user -> {
-            assertEquals("yunai", user.getUsername());
-            assertEquals("yuanma", user.getPassword());
-            assertEquals("AIP-Tower", user.getNickname());
-            assertEquals("15601691300", user.getMobile());
-            return true;
-        }))).thenReturn(300L);
+        when(userService.createUser(any())).thenReturn(300L);
+        when(userService.getUserByUsername(anyString())).thenReturn(null);
 
         // 准备参数
         TenantSaveReqVO reqVO = randomPojo(TenantSaveReqVO.class, o -> {
-            o.setContactName("AIP-Tower");
+            o.setName("协和医院");
+            o.setHospitalLevel("三甲");
+            o.setServiceUrl("https://hospital.example.com");
+            o.setContactName("管理员");
             o.setContactMobile("15601691300");
             o.setPackageId(100L);
             o.setStatus(randomCommonStatus());
             o.setWebsites(singletonList("https://www.effyic.com"));
-            o.setUsername("yunai");
-            o.setPassword("yuanma");
+            o.setAccountCount(100);
         }).setId(null); // 设置为 null，方便后面校验
 
         // 调用
-        Long tenantId = tenantService.createTenant(reqVO);
+        var resp = tenantService.createTenant(reqVO);
         // 断言
-        assertNotNull(tenantId);
+        assertNotNull(resp.getId());
+        assertEquals("A001", resp.getCode());
+        assertTrue(resp.getUsername().startsWith("admin-"));
+        assertTrue(resp.getUsername().endsWith("A001")); // 租户内序号从 001 起，与租户创建编号无关
+        assertEquals(10, resp.getPassword().length());
+        assertEquals(300L, resp.getUserId());
         // 校验记录的属性是否正确
-        TenantDO tenant = tenantMapper.selectById(tenantId);
-        assertPojoEquals(reqVO, tenant, "id");
+        TenantDO tenant = tenantMapper.selectById(resp.getId());
+        assertEquals("协和医院", tenant.getName());
+        assertEquals("三甲", tenant.getHospitalLevel());
+        assertEquals("A001", tenant.getCode());
         assertEquals(300L, tenant.getContactUserId());
         // verify 分配权限
         verify(permissionService).assignRoleMenu(eq(200L), same(tenantPackage.getMenuIds()));
@@ -290,7 +294,7 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
             o.setName("AIP-Tower");
             o.setContactName("管理员");
             o.setContactMobile("15601691300");
-            o.setStatus(CommonStatusEnum.ENABLE.getStatus());
+            o.setExpireTime(LocalDateTime.now().plusDays(10)); // 使用中
             o.setCreateTime(buildTime(2020, 12, 12));
         });
         tenantMapper.insert(dbTenant);
@@ -300,8 +304,8 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
         tenantMapper.insert(cloneIgnoreId(dbTenant, o -> o.setContactName(randomString())));
         // 测试 contactMobile 不匹配
         tenantMapper.insert(cloneIgnoreId(dbTenant, o -> o.setContactMobile(randomString())));
-        // 测试 status 不匹配
-        tenantMapper.insert(cloneIgnoreId(dbTenant, o -> o.setStatus(CommonStatusEnum.DISABLE.getStatus())));
+        // 测试 usageStatus 不匹配（已过期）
+        tenantMapper.insert(cloneIgnoreId(dbTenant, o -> o.setExpireTime(LocalDateTime.now().minusDays(1))));
         // 测试 createTime 不匹配
         tenantMapper.insert(cloneIgnoreId(dbTenant, o -> o.setCreateTime(buildTime(2021, 12, 12))));
         // 准备参数
@@ -309,7 +313,7 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
         reqVO.setName("AIP-Tower");
         reqVO.setContactName("艿");
         reqVO.setContactMobile("1560");
-        reqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
+        reqVO.setUsageStatus(0); // 使用中
         reqVO.setCreateTime(buildBetweenTime(2020, 12, 1, 2020, 12, 24));
 
         // 调用

@@ -1,15 +1,22 @@
 package com.effyic.aiptower.module.system.controller.admin.tenant;
 
+import cn.hutool.core.collection.CollUtil;
 import com.effyic.aiptower.framework.common.enums.CommonStatusEnum;
 import com.effyic.aiptower.framework.common.pojo.CommonResult;
 import com.effyic.aiptower.framework.common.pojo.PageResult;
+import com.effyic.aiptower.framework.common.util.collection.MapUtils;
+import com.effyic.aiptower.framework.common.util.number.NumberUtils;
 import com.effyic.aiptower.framework.common.util.object.BeanUtils;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackagePageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackageRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackageSaveReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackageSimpleRespVO;
+import com.effyic.aiptower.module.system.dal.dataobject.permission.MenuDO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantPackageDO;
+import com.effyic.aiptower.module.system.dal.dataobject.user.AdminUserDO;
+import com.effyic.aiptower.module.system.service.permission.MenuService;
 import com.effyic.aiptower.module.system.service.tenant.TenantPackageService;
+import com.effyic.aiptower.module.system.service.user.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,9 +26,15 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static com.effyic.aiptower.framework.common.pojo.CommonResult.success;
+import static com.effyic.aiptower.framework.common.util.collection.CollectionUtils.convertMap;
 
 @Tag(name = "管理后台 - 租户套餐")
 @RestController
@@ -31,6 +44,10 @@ public class TenantPackageController {
 
     @Resource
     private TenantPackageService tenantPackageService;
+    @Resource
+    private AdminUserService userService;
+    @Resource
+    private MenuService menuService;
 
     @PostMapping("/create")
     @Operation(summary = "创建租户套餐")
@@ -71,7 +88,9 @@ public class TenantPackageController {
     @PreAuthorize("@ss.hasPermission('system:tenant-package:query')")
     public CommonResult<TenantPackageRespVO> getTenantPackage(@RequestParam("id") Long id) {
         TenantPackageDO tenantPackage = tenantPackageService.getTenantPackage(id);
-        return success(BeanUtils.toBean(tenantPackage, TenantPackageRespVO.class));
+        TenantPackageRespVO respVO = BeanUtils.toBean(tenantPackage, TenantPackageRespVO.class);
+        fillTenantPackageExtra(Collections.singletonList(respVO));
+        return success(respVO);
     }
 
     @GetMapping("/page")
@@ -79,7 +98,12 @@ public class TenantPackageController {
     @PreAuthorize("@ss.hasPermission('system:tenant-package:query')")
     public CommonResult<PageResult<TenantPackageRespVO>> getTenantPackagePage(@Valid TenantPackagePageReqVO pageVO) {
         PageResult<TenantPackageDO> pageResult = tenantPackageService.getTenantPackagePage(pageVO);
-        return success(BeanUtils.toBean(pageResult, TenantPackageRespVO.class));
+        if (CollUtil.isEmpty(pageResult.getList())) {
+            return success(PageResult.empty(pageResult.getTotal()));
+        }
+        PageResult<TenantPackageRespVO> respPage = BeanUtils.toBean(pageResult, TenantPackageRespVO.class);
+        fillTenantPackageExtra(respPage.getList());
+        return success(respPage);
     }
 
     @GetMapping({"/get-simple-list", "simple-list"})
@@ -87,6 +111,52 @@ public class TenantPackageController {
     public CommonResult<List<TenantPackageSimpleRespVO>> getTenantPackageList() {
         List<TenantPackageDO> list = tenantPackageService.getTenantPackageListByStatus(CommonStatusEnum.ENABLE.getStatus());
         return success(BeanUtils.toBean(list, TenantPackageSimpleRespVO.class));
+    }
+
+    /**
+     * 补充授权资源名称、创建人/更新人昵称
+     */
+    private void fillTenantPackageExtra(List<TenantPackageRespVO> packages) {
+        if (CollUtil.isEmpty(packages)) {
+            return;
+        }
+        // 1. 收集菜单、用户 ID
+        Set<Long> menuIds = new HashSet<>();
+        Set<Long> userIds = new HashSet<>();
+        for (TenantPackageRespVO pkg : packages) {
+            if (CollUtil.isNotEmpty(pkg.getMenuIds())) {
+                menuIds.addAll(pkg.getMenuIds());
+            }
+            Long creatorId = NumberUtils.parseLong(pkg.getCreator());
+            if (creatorId != null) {
+                userIds.add(creatorId);
+            }
+            Long updaterId = NumberUtils.parseLong(pkg.getUpdater());
+            if (updaterId != null) {
+                userIds.add(updaterId);
+            }
+        }
+        Map<Long, MenuDO> menuMap = convertMap(menuService.getMenuList(menuIds), MenuDO::getId);
+        Map<Long, AdminUserDO> userMap = userService.getUserMap(userIds);
+        // 2. 回填
+        for (TenantPackageRespVO pkg : packages) {
+            if (CollUtil.isNotEmpty(pkg.getMenuIds())) {
+                List<String> names = new ArrayList<>(pkg.getMenuIds().size());
+                for (Long menuId : pkg.getMenuIds()) {
+                    MenuDO menu = menuMap.get(menuId);
+                    if (menu != null) {
+                        names.add(menu.getName());
+                    }
+                }
+                pkg.setMenuNames(names);
+            } else {
+                pkg.setMenuNames(Collections.emptyList());
+            }
+            MapUtils.findAndThen(userMap, NumberUtils.parseLong(pkg.getCreator()),
+                    user -> pkg.setCreatorName(user.getNickname()));
+            MapUtils.findAndThen(userMap, NumberUtils.parseLong(pkg.getUpdater()),
+                    user -> pkg.setUpdaterName(user.getNickname()));
+        }
     }
 
 }

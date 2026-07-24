@@ -17,7 +17,7 @@ import static com.effyic.aiptower.framework.common.util.date.DateUtils.FORMAT_YE
 @ToString(callSuper = true)
 public class TenantPageReqVO extends PageParam {
 
-    @Schema(description = "租户名", example = "AIP-Tower")
+    @Schema(description = "医院名称", example = "协和医院")
     private String name;
 
     @Schema(description = "联系人", example = "管理员")
@@ -26,8 +26,11 @@ public class TenantPageReqVO extends PageParam {
     @Schema(description = "联系手机", example = "15601691300")
     private String contactMobile;
 
-    @Schema(description = "租户状态（0正常 1停用）", example = "1")
-    private Integer status;
+    @Schema(description = "使用状态：0使用中 1已过期（按有效期 expireTime 判断，非表 status 字段）", example = "0")
+    private Integer usageStatus;
+
+    @Schema(description = "套餐版本编号", example = "111")
+    private Long packageId;
 
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     @Schema(description = "创建时间")

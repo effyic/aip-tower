@@ -1,14 +1,9 @@
 package com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant;
 
-import cn.hutool.core.util.ObjectUtil;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
-import org.hibernate.validator.constraints.Length;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,55 +12,42 @@ import java.util.List;
 @Data
 public class TenantSaveReqVO {
 
-    @Schema(description = "租户编号", example = "1024")
+    @Schema(description = "租户编号（编辑时必填）", example = "1024")
     private Long id;
 
-    @Schema(description = "租户名", requiredMode = Schema.RequiredMode.REQUIRED, example = "AIP-Tower")
-    @NotNull(message = "租户名不能为空")
+    @Schema(description = "医院名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "协和医院")
+    @NotBlank(message = "医院名称不能为空")
     private String name;
 
-    @Schema(description = "联系人", requiredMode = Schema.RequiredMode.REQUIRED, example = "管理员")
-    @NotNull(message = "联系人不能为空")
+    @Schema(description = "医院等级", requiredMode = Schema.RequiredMode.REQUIRED, example = "三甲")
+    @NotBlank(message = "医院等级不能为空")
+    private String hospitalLevel;
+
+    @Schema(description = "服务地址", requiredMode = Schema.RequiredMode.REQUIRED, example = "https://hospital.example.com")
+    @NotBlank(message = "服务地址不能为空")
+    private String serviceUrl;
+
+    @Schema(description = "联系人", example = "管理员")
     private String contactName;
 
     @Schema(description = "联系手机", example = "15601691300")
     private String contactMobile;
 
-    @Schema(description = "租户状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
-    @NotNull(message = "租户状态")
+    @Schema(description = "租户状态（0正常 1停用）", example = "0")
     private Integer status;
 
-    @Schema(description = "绑定域名数组", example = "https://www.effyic.com")
+    @Schema(description = "绑定域名数组", example = "[\"https://www.effyic.com\"]")
     private List<String> websites;
 
     @Schema(description = "租户套餐编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "1024")
-    @NotNull(message = "租户套餐编号不能为空")
+    @NotNull(message = "套餐版本不能为空")
     private Long packageId;
 
-    @Schema(description = "过期时间", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotNull(message = "过期时间不能为空")
+    @Schema(description = "有效期至", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotNull(message = "有效期至不能为空")
     private LocalDateTime expireTime;
 
-    @Schema(description = "账号数量", requiredMode = Schema.RequiredMode.REQUIRED, example = "1024")
-    @NotNull(message = "账号数量不能为空")
+    @Schema(description = "账号数量", example = "100")
     private Integer accountCount;
-
-    // ========== 仅【创建】时，需要传递的字段 ==========
-
-    @Schema(description = "用户账号", requiredMode = Schema.RequiredMode.REQUIRED, example = "aiptower")
-    @Pattern(regexp = "^[a-zA-Z0-9]{4,30}$", message = "用户账号由 数字、字母 组成")
-    @Size(min = 4, max = 30, message = "用户账号长度为 4-30 个字符")
-    private String username;
-
-    @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
-    @Length(min = 4, max = 16, message = "密码长度为 4-16 位")
-    private String password;
-
-    @AssertTrue(message = "用户账号、密码不能为空")
-    @JsonIgnore
-    public boolean isUsernameValid() {
-        return id != null // 修改时，不需要传递
-                || (ObjectUtil.isAllNotEmpty(username, password)); // 新增时，必须都传递 username、password
-    }
 
 }

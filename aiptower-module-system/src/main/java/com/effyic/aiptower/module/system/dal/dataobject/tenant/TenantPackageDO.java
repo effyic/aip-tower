@@ -50,5 +50,21 @@ public class TenantPackageDO extends BaseDO {
      */
     @TableField(typeHandler = JacksonTypeHandler.class)
     private Set<Long> menuIds;
+    /**
+     * 分诊Agent上限
+     */
+    private Integer triageAgentLimit;
+    /**
+     * 问诊Agent上限
+     */
+    private Integer inquiryAgentLimit;
+    /**
+     * 高级配置（false 关 / true 开）
+     */
+    private Boolean advancedConfigEnabled;
+    /**
+     * 自定义病例（false 关 / true 开）
+     */
+    private Boolean customCaseEnabled;
 
 }

@@ -109,6 +109,14 @@ public class TenantPackageServiceImpl implements TenantPackageService {
     }
 
     @Override
+    public List<TenantPackageDO> getTenantPackageList(java.util.Collection<Long> ids) {
+        if (CollUtil.isEmpty(ids)) {
+            return java.util.Collections.emptyList();
+        }
+        return tenantPackageMapper.selectByIds(ids);
+    }
+
+    @Override
     public PageResult<TenantPackageDO> getTenantPackagePage(TenantPackagePageReqVO pageReqVO) {
         return tenantPackageMapper.selectPage(pageReqVO);
     }

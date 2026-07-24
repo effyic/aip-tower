@@ -32,4 +32,20 @@ public class TenantPackageSaveReqVO {
     @NotNull(message = "关联的菜单编号不能为空")
     private Set<Long> menuIds;
 
+    @Schema(description = "分诊Agent上限", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
+    @NotNull(message = "分诊Agent上限不能为空")
+    private Integer triageAgentLimit;
+
+    @Schema(description = "问诊Agent上限", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
+    @NotNull(message = "问诊Agent上限不能为空")
+    private Integer inquiryAgentLimit;
+
+    @Schema(description = "高级配置（false 关 / true 开）", requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
+    @NotNull(message = "高级配置不能为空")
+    private Boolean advancedConfigEnabled;
+
+    @Schema(description = "自定义病例（false 关 / true 开）", requiredMode = Schema.RequiredMode.REQUIRED, example = "false")
+    @NotNull(message = "自定义病例不能为空")
+    private Boolean customCaseEnabled;
+
 }

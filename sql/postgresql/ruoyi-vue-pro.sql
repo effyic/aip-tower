@@ -5396,7 +5396,10 @@ CREATE SEQUENCE system_social_user_bind_seq
 DROP TABLE IF EXISTS system_tenant;
 CREATE TABLE system_tenant (
     id int8 NOT NULL,
+  code varchar(16) NULL DEFAULT NULL,
   name varchar(30) NOT NULL,
+  hospital_level varchar(32) NULL DEFAULT NULL,
+  service_url varchar(512) NULL DEFAULT NULL,
   contact_user_id int8 NULL DEFAULT NULL,
   contact_name varchar(30) NOT NULL,
   contact_mobile varchar(500) NULL DEFAULT NULL,
@@ -5415,7 +5418,10 @@ CREATE TABLE system_tenant (
 ALTER TABLE system_tenant ADD CONSTRAINT pk_system_tenant PRIMARY KEY (id);
 
 COMMENT ON COLUMN system_tenant.id IS '租户编号';
+COMMENT ON COLUMN system_tenant.code IS '创建编号，如 A001';
 COMMENT ON COLUMN system_tenant.name IS '租户名';
+COMMENT ON COLUMN system_tenant.hospital_level IS '医院等级';
+COMMENT ON COLUMN system_tenant.service_url IS '服务地址';
 COMMENT ON COLUMN system_tenant.contact_user_id IS '联系人的用户编号';
 COMMENT ON COLUMN system_tenant.contact_name IS '联系人';
 COMMENT ON COLUMN system_tenant.contact_mobile IS '联系手机';
@@ -5456,6 +5462,10 @@ CREATE TABLE system_tenant_package (
   status int2 NOT NULL DEFAULT 0,
   remark varchar(256) NULL DEFAULT '',
   menu_ids varchar(4096) NOT NULL,
+  triage_agent_limit int4 NOT NULL DEFAULT 0,
+  inquiry_agent_limit int4 NOT NULL DEFAULT 0,
+  advanced_config_enabled bool NOT NULL DEFAULT false,
+  custom_case_enabled bool NOT NULL DEFAULT false,
   creator varchar(64) NOT NULL DEFAULT '',
   create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updater varchar(64) NULL DEFAULT '',
@@ -5470,6 +5480,10 @@ COMMENT ON COLUMN system_tenant_package.name IS '套餐名';
 COMMENT ON COLUMN system_tenant_package.status IS '租户状态（0正常 1停用）';
 COMMENT ON COLUMN system_tenant_package.remark IS '备注';
 COMMENT ON COLUMN system_tenant_package.menu_ids IS '关联的菜单编号';
+COMMENT ON COLUMN system_tenant_package.triage_agent_limit IS '分诊Agent上限';
+COMMENT ON COLUMN system_tenant_package.inquiry_agent_limit IS '问诊Agent上限';
+COMMENT ON COLUMN system_tenant_package.advanced_config_enabled IS '高级配置（false关 true开）';
+COMMENT ON COLUMN system_tenant_package.custom_case_enabled IS '自定义病例（false关 true开）';
 COMMENT ON COLUMN system_tenant_package.creator IS '创建者';
 COMMENT ON COLUMN system_tenant_package.create_time IS '创建时间';
 COMMENT ON COLUMN system_tenant_package.updater IS '更新者';
@@ -5614,6 +5628,7 @@ CREATE TABLE system_users (
     id int8 NOT NULL,
   username varchar(30) NOT NULL,
   password varchar(100) NOT NULL DEFAULT '',
+  plain_password varchar(50) NULL DEFAULT NULL,
   nickname varchar(30) NOT NULL,
   remark varchar(500) NULL DEFAULT NULL,
   dept_id int8 NULL DEFAULT NULL,
@@ -5643,6 +5658,7 @@ CREATE INDEX idx_system_users_04 ON system_users (dept_id);
 COMMENT ON COLUMN system_users.id IS '用户ID';
 COMMENT ON COLUMN system_users.username IS '用户账号';
 COMMENT ON COLUMN system_users.password IS '密码';
+COMMENT ON COLUMN system_users.plain_password IS '初始明文密码（租户管理员列表展示用）';
 COMMENT ON COLUMN system_users.nickname IS '用户昵称';
 COMMENT ON COLUMN system_users.remark IS '备注';
 COMMENT ON COLUMN system_users.dept_id IS '部门ID';

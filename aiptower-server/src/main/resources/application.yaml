@@ -270,6 +270,7 @@ aiptower:
   security:
     permit-all_urls:
       - /admin-api/mp/open/** # 微信公众号开放平台，微信回调接口，不需要登录
+      - /admin-api/system/biz-open/** # B 端对接开放接口
   api-encrypt:
     enable: true # 是否开启 API 加密
     algorithm: AES # 加密算法，支持 AES、RSA 等
@@ -306,8 +307,8 @@ aiptower:
     delete-batch-enable: true # 是否生成批量删除接口
     unit-test-enable: false # 是否生成单元测试
     import-enable: false # 是否生成 Excel 导入接口
-  tenant: # 多租户相关配置项
-    enable: true
+  tenant: # 多租户相关配置项（关闭：本平台单租户运营，system_tenant 仅服务 B 端授权）
+    enable: false
     ignore-urls:
       - /jmreport/* # 积木报表，无法携带租户编号
     ignore-visit-urls:

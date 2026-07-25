@@ -68,6 +68,14 @@ public interface RedisKeyConstants {
     String OAUTH2_ACCESS_TOKEN = "oauth2_access_token:%s";
 
     /**
+     * B 端开放接口访问令牌
+     * <p>
+     * KEY 格式：biz_open_access_token:{token}
+     * VALUE：租户编号
+     */
+    String BIZ_OPEN_ACCESS_TOKEN = "biz_open_access_token:%s";
+
+    /**
      * 站内信模版的缓存
      * <p>
      * KEY 格式：notify_template:{code}

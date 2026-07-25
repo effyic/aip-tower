@@ -40,6 +40,10 @@ public interface TenantMapper extends BaseMapperX<TenantDO> {
         return selectOne(TenantDO::getCode, code);
     }
 
+    default TenantDO selectByClientId(String clientId) {
+        return selectOne(TenantDO::getClientId, clientId);
+    }
+
     /**
      * 查询最大创建编号（形如 A001），用于生成下一个编号
      */

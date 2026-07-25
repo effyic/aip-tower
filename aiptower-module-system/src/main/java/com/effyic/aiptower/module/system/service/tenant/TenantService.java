@@ -1,9 +1,9 @@
 package com.effyic.aiptower.module.system.service.tenant;
 
 import com.effyic.aiptower.framework.common.pojo.PageResult;
-import com.effyic.aiptower.framework.tenant.core.context.TenantContextHolder;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantAdminAccountRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantCreateRespVO;
+import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantCredentialRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantPageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantSaveReqVO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantDO;
@@ -15,149 +15,76 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 租户 Service 接口
+ * 租户 Service 接口（B 端客户档案、对接凭证、管理员账号）
  *
  * @author effyic
  */
 public interface TenantService {
 
     /**
-     * 创建租户（自动生成创建编号与默认管理员账号）
-     *
-     * @param createReqVO 创建信息
-     * @return 租户及默认管理员账号信息
+     * 创建 B 端租户（生成机构编号、对接凭证、默认管理员账号）
      */
     TenantCreateRespVO createTenant(@Valid TenantSaveReqVO createReqVO);
 
     /**
-     * 为指定租户生成新的管理员账号（一键创建）
-     *
-     * @param tenantId 租户编号
-     * @return 新管理员账号信息
+     * 重置租户对接凭证（clientId/clientSecret）
+     */
+    TenantCredentialRespVO resetTenantCredential(Long tenantId);
+
+    /**
+     * 获得租户对接凭证（不含明文 secret）
+     */
+    TenantCredentialRespVO getTenantCredential(Long tenantId);
+
+    /**
+     * 校验 B 端对接凭证
+     */
+    TenantDO authenticateClient(String clientId, String clientSecret);
+
+    /**
+     * 为指定租户生成新的 B 端管理员账号
      */
     TenantAdminAccountRespVO generateTenantAdmin(Long tenantId);
 
     /**
-     * 获得指定租户下的管理员账号列表（含明文初始密码）
-     *
-     * @param tenantId 租户编号
-     * @return 管理员账号列表
+     * 获得指定租户下的 B 端管理员账号列表（含明文密码）
      */
     List<TenantAdminAccountRespVO> getTenantAdminList(Long tenantId);
 
     /**
      * 更新租户
-     *
-     * @param updateReqVO 更新信息
      */
     void updateTenant(@Valid TenantSaveReqVO updateReqVO);
 
     /**
-     * 更新租户的角色菜单
-     *
-     * @param tenantId 租户编号
-     * @param menuIds  菜单编号数组
+     * 更新租户的角色菜单（本平台多租户关闭后为空操作）
      */
     void updateTenantRoleMenu(Long tenantId, Set<Long> menuIds);
 
-    /**
-     * 删除租户
-     *
-     * @param id 编号
-     */
     void deleteTenant(Long id);
 
-    /**
-     * 批量删除租户
-     *
-     * @param ids 编号数组
-     */
     void deleteTenantList(List<Long> ids);
 
-    /**
-     * 获得租户
-     *
-     * @param id 编号
-     * @return 租户
-     */
     TenantDO getTenant(Long id);
 
-    /**
-     * 获得租户分页
-     *
-     * @param pageReqVO 分页查询
-     * @return 租户分页
-     */
     PageResult<TenantDO> getTenantPage(TenantPageReqVO pageReqVO);
 
-    /**
-     * 获得名字对应的租户
-     *
-     * @param name 租户名
-     * @return 租户
-     */
     TenantDO getTenantByName(String name);
 
-    /**
-     * 获得域名对应的租户
-     *
-     * @param website 域名
-     * @return 租户
-     */
     TenantDO getTenantByWebsite(String website);
 
-    /**
-     * 获得使用指定套餐的租户数量
-     *
-     * @param packageId 租户套餐编号
-     * @return 租户数量
-     */
     Long getTenantCountByPackageId(Long packageId);
 
-    /**
-     * 获得使用指定套餐的租户数组
-     *
-     * @param packageId 租户套餐编号
-     * @return 租户数组
-     */
     List<TenantDO> getTenantListByPackageId(Long packageId);
 
-    /**
-     * 获得指定状态的租户列表
-     *
-     * @param status 状态
-     * @return 租户列表
-     */
     List<TenantDO> getTenantListByStatus(Integer status);
 
-    /**
-     * 进行租户的信息处理逻辑
-     * 其中，租户编号从 {@link TenantContextHolder} 上下文中获取
-     *
-     * @param handler 处理器
-     */
     void handleTenantInfo(TenantInfoHandler handler);
 
-    /**
-     * 进行租户的菜单处理逻辑
-     * 其中，租户编号从 {@link TenantContextHolder} 上下文中获取
-     *
-     * @param handler 处理器
-     */
     void handleTenantMenu(TenantMenuHandler handler);
 
-    /**
-     * 获得所有租户
-     *
-     * @return 租户编号数组
-     */
     List<Long> getTenantIdList();
 
-    /**
-     * 校验租户是否合法
-     *
-     * @param id 租户编号
-     */
     void validTenant(Long id);
 
 }

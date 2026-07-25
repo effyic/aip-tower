@@ -44,10 +44,6 @@ public class AdminUserDO extends TenantBaseDO {
      */
     private String password;
     /**
-     * 初始明文密码（租户自动生成的管理员账号用于列表展示；登录仍使用 {@link #password}）
-     */
-    private String plainPassword;
-    /**
      * 用户昵称
      */
     private String nickname;

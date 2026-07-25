@@ -5,21 +5,18 @@ import com.effyic.aiptower.framework.common.pojo.PageResult;
 import com.effyic.aiptower.framework.tenant.config.TenantProperties;
 import com.effyic.aiptower.framework.tenant.core.context.TenantContextHolder;
 import com.effyic.aiptower.framework.test.core.ut.BaseDbUnitTest;
+import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantAdminAccountRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantPageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantSaveReqVO;
 import com.effyic.aiptower.module.system.dal.dataobject.permission.MenuDO;
-import com.effyic.aiptower.module.system.dal.dataobject.permission.RoleDO;
+import com.effyic.aiptower.module.system.dal.dataobject.tenant.BizTenantAdminDO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantDO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantPackageDO;
+import com.effyic.aiptower.module.system.dal.mysql.tenant.BizTenantAdminMapper;
 import com.effyic.aiptower.module.system.dal.mysql.tenant.TenantMapper;
-import com.effyic.aiptower.module.system.enums.permission.RoleCodeEnum;
-import com.effyic.aiptower.module.system.enums.permission.RoleTypeEnum;
 import com.effyic.aiptower.module.system.service.permission.MenuService;
-import com.effyic.aiptower.module.system.service.permission.PermissionService;
-import com.effyic.aiptower.module.system.service.permission.RoleService;
 import com.effyic.aiptower.module.system.service.tenant.handler.TenantInfoHandler;
 import com.effyic.aiptower.module.system.service.tenant.handler.TenantMenuHandler;
-import com.effyic.aiptower.module.system.service.user.AdminUserService;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +38,6 @@ import static com.effyic.aiptower.framework.test.core.util.RandomUtils.*;
 import static com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantDO.PACKAGE_ID_SYSTEM;
 import static com.effyic.aiptower.module.system.enums.ErrorCodeConstants.*;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -60,24 +56,25 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
 
     @Resource
     private TenantMapper tenantMapper;
+    @Resource
+    private BizTenantAdminMapper bizTenantAdminMapper;
 
     @MockitoBean
     private TenantProperties tenantProperties;
     @MockitoBean
     private TenantPackageService tenantPackageService;
     @MockitoBean
-    private AdminUserService userService;
-    @MockitoBean
-    private RoleService roleService;
-    @MockitoBean
     private MenuService menuService;
     @MockitoBean
-    private PermissionService permissionService;
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @BeforeEach
     public void setUp() {
         // 清理租户上下文
         TenantContextHolder.clear();
+        when(passwordEncoder.encode(anyString())).thenAnswer(invocation -> "encoded:" + invocation.getArgument(0));
+        when(passwordEncoder.matches(anyString(), anyString())).thenAnswer(invocation ->
+                ("encoded:" + invocation.getArgument(0)).equals(invocation.getArgument(1)));
     }
 
     @Test
@@ -133,17 +130,6 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
         // mock 套餐 100L
         TenantPackageDO tenantPackage = randomPojo(TenantPackageDO.class, o -> o.setId(100L));
         when(tenantPackageService.validTenantPackage(eq(100L))).thenReturn(tenantPackage);
-        // mock 角色 200L
-        when(roleService.createRole(argThat(role -> {
-            assertEquals(RoleCodeEnum.TENANT_ADMIN.getName(), role.getName());
-            assertEquals(RoleCodeEnum.TENANT_ADMIN.getCode(), role.getCode());
-            assertEquals(0, role.getSort());
-            assertEquals("系统自动生成", role.getRemark());
-            return true;
-        }), eq(RoleTypeEnum.SYSTEM.getType()))).thenReturn(200L);
-        // mock 用户 300L
-        when(userService.createUser(any())).thenReturn(300L);
-        when(userService.getUserByUsername(anyString())).thenReturn(null);
 
         // 准备参数
         TenantSaveReqVO reqVO = randomPojo(TenantSaveReqVO.class, o -> {
@@ -163,20 +149,47 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
         // 断言
         assertNotNull(resp.getId());
         assertEquals("A001", resp.getCode());
-        assertTrue(resp.getUsername().startsWith("admin-"));
-        assertTrue(resp.getUsername().endsWith("A001")); // 租户内序号从 001 起，与租户创建编号无关
-        assertEquals(10, resp.getPassword().length());
-        assertEquals(300L, resp.getUserId());
+        assertTrue(resp.getClientId().startsWith("biz_a001_"));
+        assertEquals(32, resp.getClientSecret().length());
         // 校验记录的属性是否正确
         TenantDO tenant = tenantMapper.selectById(resp.getId());
         assertEquals("协和医院", tenant.getName());
         assertEquals("三甲", tenant.getHospitalLevel());
         assertEquals("A001", tenant.getCode());
-        assertEquals(300L, tenant.getContactUserId());
-        // verify 分配权限
-        verify(permissionService).assignRoleMenu(eq(200L), same(tenantPackage.getMenuIds()));
-        // verify 分配角色
-        verify(permissionService).assignUserRole(eq(300L), eq(singleton(200L)));
+        assertEquals(resp.getClientId(), tenant.getClientId());
+        assertEquals("encoded:" + resp.getClientSecret(), tenant.getClientSecret());
+        // 默认管理员账号
+        assertNotNull(resp.getAdminUsername());
+        assertTrue(resp.getAdminUsername().startsWith("admin-"));
+        assertTrue(resp.getAdminUsername().endsWith("A001"));
+        assertEquals(10, resp.getAdminPassword().length());
+        assertEquals(tenant.getCreateTime(), resp.getAdminCreateTime());
+        List<BizTenantAdminDO> admins = bizTenantAdminMapper.selectListByTenantId(resp.getId());
+        assertEquals(1, admins.size());
+        assertEquals(resp.getAdminUsername(), admins.get(0).getUsername());
+        assertEquals(resp.getAdminPassword(), admins.get(0).getPassword());
+    }
+
+    @Test
+    public void testGenerateTenantAdmin_andList() {
+        TenantPackageDO tenantPackage = randomPojo(TenantPackageDO.class, o -> o.setId(100L));
+        when(tenantPackageService.validTenantPackage(eq(100L))).thenReturn(tenantPackage);
+        TenantSaveReqVO reqVO = randomPojo(TenantSaveReqVO.class, o -> {
+            o.setName("协和医院");
+            o.setPackageId(100L);
+            o.setStatus(CommonStatusEnum.ENABLE.getStatus());
+            o.setWebsites(singletonList("https://www.effyic.com"));
+        }).setId(null);
+        var created = tenantService.createTenant(reqVO);
+
+        TenantAdminAccountRespVO second = tenantService.generateTenantAdmin(created.getId());
+        assertTrue(second.getUsername().endsWith("A002"));
+        assertEquals(10, second.getPassword().length());
+
+        List<TenantAdminAccountRespVO> list = tenantService.getTenantAdminList(created.getId());
+        assertEquals(2, list.size());
+        assertEquals(created.getAdminUsername(), list.get(0).getUsername());
+        assertEquals(second.getUsername(), list.get(1).getUsername());
     }
 
     @Test
@@ -195,23 +208,31 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
         TenantPackageDO tenantPackage = randomPojo(TenantPackageDO.class,
                 o -> o.setMenuIds(asSet(200L, 201L)));
         when(tenantPackageService.validTenantPackage(eq(reqVO.getPackageId()))).thenReturn(tenantPackage);
-        // mock 所有角色
-        RoleDO role100 = randomPojo(RoleDO.class, o -> o.setId(100L).setCode(RoleCodeEnum.TENANT_ADMIN.getCode()));
-        role100.setTenantId(dbTenant.getId());
-        RoleDO role101 = randomPojo(RoleDO.class, o -> o.setId(101L));
-        role101.setTenantId(dbTenant.getId());
-        when(roleService.getRoleList()).thenReturn(asList(role100, role101));
-        // mock 每个角色的权限
-        when(permissionService.getRoleMenuListByRoleId(eq(101L))).thenReturn(asSet(201L, 202L));
 
         // 调用
         tenantService.updateTenant(reqVO);
         // 校验是否更新正确
         TenantDO tenant = tenantMapper.selectById(reqVO.getId()); // 获取最新的
         assertPojoEquals(reqVO, tenant);
-        // verify 设置角色权限
-        verify(permissionService).assignRoleMenu(eq(100L), eq(asSet(200L, 201L)));
-        verify(permissionService).assignRoleMenu(eq(101L), eq(asSet(201L)));
+    }
+
+    @Test
+    public void testAuthenticateClient_success() {
+        TenantDO tenant = randomPojo(TenantDO.class, o -> o.setId(1L)
+                .setStatus(CommonStatusEnum.ENABLE.getStatus())
+                .setExpireTime(LocalDateTime.now().plusDays(1))
+                .setClientId("biz_a001_test")
+                .setClientSecret("encoded:secret123"));
+        tenantMapper.insert(tenant);
+
+        TenantDO result = tenantService.authenticateClient("biz_a001_test", "secret123");
+        assertEquals(1L, result.getId());
+    }
+
+    @Test
+    public void testAuthenticateClient_badCredentials() {
+        assertServiceException(() -> tenantService.authenticateClient("missing", "x"),
+                TENANT_CLIENT_BAD_CREDENTIALS);
     }
 
     @Test
@@ -311,7 +332,7 @@ public class TenantServiceImplTest extends BaseDbUnitTest {
         // 准备参数
         TenantPageReqVO reqVO = new TenantPageReqVO();
         reqVO.setName("AIP-Tower");
-        reqVO.setContactName("艿");
+        reqVO.setContactName("管理");
         reqVO.setContactMobile("1560");
         reqVO.setUsageStatus(0); // 使用中
         reqVO.setCreateTime(buildBetweenTime(2020, 12, 1, 2020, 12, 24));

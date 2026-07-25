@@ -5628,7 +5628,6 @@ CREATE TABLE system_users (
     id int8 NOT NULL,
   username varchar(30) NOT NULL,
   password varchar(100) NOT NULL DEFAULT '',
-  plain_password varchar(50) NULL DEFAULT NULL,
   nickname varchar(30) NOT NULL,
   remark varchar(500) NULL DEFAULT NULL,
   dept_id int8 NULL DEFAULT NULL,
@@ -5658,7 +5657,6 @@ CREATE INDEX idx_system_users_04 ON system_users (dept_id);
 COMMENT ON COLUMN system_users.id IS '用户ID';
 COMMENT ON COLUMN system_users.username IS '用户账号';
 COMMENT ON COLUMN system_users.password IS '密码';
-COMMENT ON COLUMN system_users.plain_password IS '初始明文密码（租户管理员列表展示用）';
 COMMENT ON COLUMN system_users.nickname IS '用户昵称';
 COMMENT ON COLUMN system_users.remark IS '备注';
 COMMENT ON COLUMN system_users.dept_id IS '部门ID';

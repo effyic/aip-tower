@@ -11,10 +11,10 @@ import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.Ten
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackageRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackageSaveReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackageSimpleRespVO;
-import com.effyic.aiptower.module.system.dal.dataobject.permission.MenuDO;
+import com.effyic.aiptower.module.system.dal.dataobject.tenant.BizMenuDO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantPackageDO;
 import com.effyic.aiptower.module.system.dal.dataobject.user.AdminUserDO;
-import com.effyic.aiptower.module.system.service.permission.MenuService;
+import com.effyic.aiptower.module.system.service.tenant.BizMenuService;
 import com.effyic.aiptower.module.system.service.tenant.TenantPackageService;
 import com.effyic.aiptower.module.system.service.user.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,7 +36,7 @@ import java.util.Set;
 import static com.effyic.aiptower.framework.common.pojo.CommonResult.success;
 import static com.effyic.aiptower.framework.common.util.collection.CollectionUtils.convertMap;
 
-@Tag(name = "管理后台 - 租户套餐")
+@Tag(name = "管理后台 - B端租户套餐")
 @RestController
 @RequestMapping("/system/tenant-package")
 @Validated
@@ -47,7 +47,7 @@ public class TenantPackageController {
     @Resource
     private AdminUserService userService;
     @Resource
-    private MenuService menuService;
+    private BizMenuService bizMenuService;
 
     @PostMapping("/create")
     @Operation(summary = "创建租户套餐")
@@ -136,14 +136,14 @@ public class TenantPackageController {
                 userIds.add(updaterId);
             }
         }
-        Map<Long, MenuDO> menuMap = convertMap(menuService.getMenuList(menuIds), MenuDO::getId);
+        Map<Long, BizMenuDO> menuMap = convertMap(bizMenuService.getBizMenuList(menuIds), BizMenuDO::getId);
         Map<Long, AdminUserDO> userMap = userService.getUserMap(userIds);
         // 2. 回填
         for (TenantPackageRespVO pkg : packages) {
             if (CollUtil.isNotEmpty(pkg.getMenuIds())) {
                 List<String> names = new ArrayList<>(pkg.getMenuIds().size());
                 for (Long menuId : pkg.getMenuIds()) {
-                    MenuDO menu = menuMap.get(menuId);
+                    BizMenuDO menu = menuMap.get(menuId);
                     if (menu != null) {
                         names.add(menu.getName());
                     }

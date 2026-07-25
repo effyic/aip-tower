@@ -13,6 +13,7 @@ import com.effyic.aiptower.framework.excel.core.util.ExcelUtils;
 import com.effyic.aiptower.framework.tenant.core.aop.TenantIgnore;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantAdminAccountRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantCreateRespVO;
+import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantCredentialRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantPageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantSaveReqVO;
@@ -49,7 +50,7 @@ import static com.effyic.aiptower.framework.common.pojo.CommonResult.success;
 import static com.effyic.aiptower.framework.common.util.collection.CollectionUtils.convertList;
 import static com.effyic.aiptower.framework.common.util.collection.CollectionUtils.convertMap;
 
-@Tag(name = "管理后台 - 租户")
+@Tag(name = "管理后台 - B端租户")
 @RestController
 @RequestMapping("/system/tenant")
 @Validated
@@ -65,7 +66,7 @@ public class TenantController {
     @GetMapping("/get-id-by-name")
     @PermitAll
     @TenantIgnore
-    @Operation(summary = "使用租户名，获得租户编号", description = "登录界面，根据用户的租户名，获得租户编号")
+    @Operation(summary = "使用租户名，获得租户编号", description = "兼容旧登录界面")
     @Parameter(name = "name", description = "租户名", required = true, example = "1024")
     public CommonResult<Long> getTenantIdByName(@RequestParam("name") String name) {
         TenantDO tenant = tenantService.getTenantByName(name);
@@ -75,7 +76,7 @@ public class TenantController {
     @GetMapping({ "simple-list" })
     @PermitAll
     @TenantIgnore
-    @Operation(summary = "获取租户精简信息列表", description = "只包含被开启的租户，用于【首页】功能的选择租户选项")
+    @Operation(summary = "获取租户精简信息列表", description = "只包含被开启的租户")
     public CommonResult<List<TenantRespVO>> getTenantSimpleList() {
         List<TenantDO> list = tenantService.getTenantListByStatus(CommonStatusEnum.ENABLE.getStatus());
         return success(convertList(list, tenantDO ->
@@ -85,7 +86,7 @@ public class TenantController {
     @GetMapping("/get-by-website")
     @PermitAll
     @TenantIgnore
-    @Operation(summary = "使用域名，获得租户信息", description = "登录界面，根据用户的域名，获得租户信息")
+    @Operation(summary = "使用域名，获得租户信息", description = "兼容旧登录界面")
     @Parameter(name = "website", description = "域名", required = true, example = "www.effyic.com")
     public CommonResult<TenantRespVO> getTenantByWebsite(
             @RequestParam("website") @Pattern(regexp = "^[a-zA-Z0-9.-]+(:\\d{1,5})?$", message = "网站域名格式不正确") String website) {
@@ -97,14 +98,31 @@ public class TenantController {
     }
 
     @PostMapping("/create")
-    @Operation(summary = "创建租户（自动创建默认管理员账号）")
+    @Operation(summary = "创建 B 端租户", description = "自动生成对接凭证 + 默认管理员账号")
     @PreAuthorize("@ss.hasPermission('system:tenant:create')")
     public CommonResult<TenantCreateRespVO> createTenant(@Valid @RequestBody TenantSaveReqVO createReqVO) {
         return success(tenantService.createTenant(createReqVO));
     }
 
+    @PostMapping("/reset-credential")
+    @Operation(summary = "重置 B 端对接凭证", description = "重新生成 clientSecret，明文仅本次返回；与管理员账号无关")
+    @Parameter(name = "id", description = "租户编号", required = true, example = "1024")
+    @PreAuthorize("@ss.hasPermission('system:tenant:update')")
+    public CommonResult<TenantCredentialRespVO> resetTenantCredential(@RequestParam("id") Long id) {
+        return success(tenantService.resetTenantCredential(id));
+    }
+
+    @GetMapping("/get-credential")
+    @Operation(summary = "查询 B 端对接凭证", description = "仅返回 clientId，不含 secret")
+    @Parameter(name = "id", description = "租户编号", required = true, example = "1024")
+    @PreAuthorize("@ss.hasPermission('system:tenant:query')")
+    public CommonResult<TenantCredentialRespVO> getTenantCredential(@RequestParam("id") Long id) {
+        return success(tenantService.getTenantCredential(id));
+    }
+
     @PostMapping("/generate-admin")
-    @Operation(summary = "一键生成租户管理员账号", description = "账号规则：admin-{医院拼音首字母}A001，序号按租户隔离递增；密码 10 位随机字母数字，明文落库供列表展示")
+    @Operation(summary = "一键生成 B 端管理员账号",
+            description = "账号规则：admin-{医院拼音首字母}A001，序号按租户隔离递增；密码 10 位随机字母数字，明文落库供列表与 B 端拉取")
     @Parameter(name = "id", description = "租户编号", required = true, example = "1024")
     @PreAuthorize("@ss.hasPermission('system:tenant:update')")
     public CommonResult<TenantAdminAccountRespVO> generateTenantAdmin(@RequestParam("id") Long id) {
@@ -112,7 +130,7 @@ public class TenantController {
     }
 
     @GetMapping("/admin-list")
-    @Operation(summary = "租户管理员账号列表", description = "返回初始账号、明文初始密码、创建时间")
+    @Operation(summary = "B 端管理员账号列表", description = "返回初始账号、明文初始密码、创建时间")
     @Parameter(name = "id", description = "租户编号", required = true, example = "1024")
     @PreAuthorize("@ss.hasPermission('system:tenant:query')")
     public CommonResult<List<TenantAdminAccountRespVO>> getTenantAdminList(@RequestParam("id") Long id) {

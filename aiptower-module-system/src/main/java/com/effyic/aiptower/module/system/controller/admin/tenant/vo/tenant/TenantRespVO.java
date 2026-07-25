@@ -72,6 +72,10 @@ public class TenantRespVO {
     @Schema(description = "账号数量", example = "100")
     private Integer accountCount;
 
+    @Schema(description = "对接 ClientId", example = "biz_a001_xxxx")
+    @ExcelProperty("ClientId")
+    private String clientId;
+
     @Schema(description = "创建人", example = "1")
     private String creator;
 

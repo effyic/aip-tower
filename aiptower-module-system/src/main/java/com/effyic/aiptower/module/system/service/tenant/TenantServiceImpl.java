@@ -2,6 +2,7 @@ package com.effyic.aiptower.module.system.service.tenant;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.Assert;
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -16,33 +17,24 @@ import com.effyic.aiptower.framework.common.util.object.BeanUtils;
 import com.effyic.aiptower.framework.datapermission.core.annotation.DataPermission;
 import com.effyic.aiptower.framework.tenant.config.TenantProperties;
 import com.effyic.aiptower.framework.tenant.core.context.TenantContextHolder;
-import com.effyic.aiptower.framework.tenant.core.util.TenantUtils;
-import com.effyic.aiptower.module.system.controller.admin.permission.vo.role.RoleSaveReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantAdminAccountRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantCreateRespVO;
+import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantCredentialRespVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantPageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.tenant.TenantSaveReqVO;
-import com.effyic.aiptower.module.system.convert.tenant.TenantConvert;
 import com.effyic.aiptower.module.system.dal.dataobject.permission.MenuDO;
-import com.effyic.aiptower.module.system.dal.dataobject.permission.RoleDO;
+import com.effyic.aiptower.module.system.dal.dataobject.tenant.BizTenantAdminDO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantDO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantPackageDO;
-import com.effyic.aiptower.module.system.dal.dataobject.user.AdminUserDO;
-import com.effyic.aiptower.framework.mybatis.core.query.LambdaQueryWrapperX;
+import com.effyic.aiptower.module.system.dal.mysql.tenant.BizTenantAdminMapper;
 import com.effyic.aiptower.module.system.dal.mysql.tenant.TenantMapper;
-import com.effyic.aiptower.module.system.dal.mysql.user.AdminUserMapper;
-import com.effyic.aiptower.module.system.enums.permission.RoleCodeEnum;
-import com.effyic.aiptower.module.system.enums.permission.RoleTypeEnum;
 import com.effyic.aiptower.module.system.service.permission.MenuService;
-import com.effyic.aiptower.module.system.service.permission.PermissionService;
-import com.effyic.aiptower.module.system.service.permission.RoleService;
 import com.effyic.aiptower.module.system.service.tenant.handler.TenantInfoHandler;
 import com.effyic.aiptower.module.system.service.tenant.handler.TenantMenuHandler;
-import com.effyic.aiptower.module.system.service.user.AdminUserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -51,16 +43,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import static com.effyic.aiptower.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static com.effyic.aiptower.module.system.enums.ErrorCodeConstants.*;
-import static java.util.Collections.singleton;
 
 /**
- * 租户 Service 实现类
+ * 租户 Service 实现类（B 端客户档案与对接凭证）
  *
  * @author effyic
  */
@@ -70,8 +59,9 @@ import static java.util.Collections.singleton;
 public class TenantServiceImpl implements TenantService {
 
     private static final int DEFAULT_ACCOUNT_COUNT = 100;
+    private static final int CLIENT_SECRET_LENGTH = 32;
     private static final int ADMIN_PASSWORD_LENGTH = 10;
-    private static final String ADMIN_PASSWORD_CHARS =
+    private static final String RANDOM_CHARS =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final Pattern TENANT_CODE_PATTERN = Pattern.compile("^A(\\d{3})$");
     /** 租户内管理员账号序号：admin-{首字母}A001 */
@@ -84,20 +74,14 @@ public class TenantServiceImpl implements TenantService {
     @Resource
     private TenantMapper tenantMapper;
     @Resource
-    private AdminUserMapper userMapper;
+    private BizTenantAdminMapper bizTenantAdminMapper;
 
     @Resource
     private TenantPackageService tenantPackageService;
     @Resource
-    @Lazy // 延迟，避免循环依赖报错
-    private AdminUserService userService;
-    @Resource
-    private RoleService roleService;
-    @Resource
     private MenuService menuService;
     @Resource
-    private PermissionService permissionService;
-
+    private PasswordEncoder passwordEncoder;
     @Override
     public List<Long> getTenantIdList() {
         List<TenantDO> tenants = tenantMapper.selectList();
@@ -119,17 +103,13 @@ public class TenantServiceImpl implements TenantService {
     }
 
     @Override
-    @DSTransactional // 多数据源，使用 @DSTransactional 保证本地事务，以及数据源的切换
-    @DataPermission(enable = false) // 参见 https://gitee.com/zhijiantianya/ruoyi-vue-pro/pulls/1154 说明
+    @DSTransactional
+    @DataPermission(enable = false)
     public TenantCreateRespVO createTenant(TenantSaveReqVO createReqVO) {
-        // 校验租户名称是否重复
         validTenantNameDuplicate(createReqVO.getName(), null);
-        // 校验租户域名是否重复
         validTenantWebsiteDuplicate(createReqVO.getWebsites(), null);
-        // 校验套餐被禁用
-        TenantPackageDO tenantPackage = tenantPackageService.validTenantPackage(createReqVO.getPackageId());
+        tenantPackageService.validTenantPackage(createReqVO.getPackageId());
 
-        // 创建租户
         TenantDO tenant = BeanUtils.toBean(createReqVO, TenantDO.class);
         if (StrUtil.isBlank(tenant.getContactName())) {
             tenant.setContactName("管理员");
@@ -141,31 +121,59 @@ public class TenantServiceImpl implements TenantService {
             tenant.setAccountCount(DEFAULT_ACCOUNT_COUNT);
         }
         tenant.setCode(generateNextTenantCode());
+
+        String clientId = generateClientId(tenant.getCode());
+        String rawSecret = generateClientSecret();
+        tenant.setClientId(clientId);
+        tenant.setClientSecret(passwordEncoder.encode(rawSecret));
         tenantMapper.insert(tenant);
 
-        // 创建租户的管理员（账号创建时间与租户创建时间一致；序号按租户隔离从 A001 起）
-        String password = generateAdminPassword();
-        AtomicReference<Long> userIdRef = new AtomicReference<>();
-        AtomicReference<String> usernameRef = new AtomicReference<>();
-        AtomicReference<LocalDateTime> userCreateTimeRef = new AtomicReference<>();
-        TenantUtils.execute(tenant.getId(), () -> {
-            Long roleId = createRole(tenantPackage);
-            String username = buildNextAdminUsername(tenant.getName());
-            Long userId = createUser(roleId, username, password, tenant.getContactName(), createReqVO.getContactMobile());
-            // 第一次管理员创建时间 = 租户创建时间，并保存明文密码
-            LocalDateTime tenantCreateTime = tenantMapper.selectById(tenant.getId()).getCreateTime();
-            userMapper.update(null, new LambdaUpdateWrapper<AdminUserDO>()
-                    .set(AdminUserDO::getCreateTime, tenantCreateTime)
-                    .set(AdminUserDO::getPlainPassword, password)
-                    .eq(AdminUserDO::getId, userId));
-            tenantMapper.updateById(new TenantDO().setId(tenant.getId()).setContactUserId(userId));
-            userIdRef.set(userId);
-            usernameRef.set(username);
-            userCreateTimeRef.set(tenantCreateTime);
-        });
+        // 默认创建第一个 B 端管理员：创建时间与租户创建时间一致
+        TenantDO saved = tenantMapper.selectById(tenant.getId());
+        BizTenantAdminDO admin = createBizTenantAdmin(saved, saved.getCreateTime());
 
-        return new TenantCreateRespVO(tenant.getId(), tenant.getCode(),
-                usernameRef.get(), password, userIdRef.get(), userCreateTimeRef.get());
+        return new TenantCreateRespVO(tenant.getId(), tenant.getCode(), clientId, rawSecret,
+                admin.getUsername(), admin.getPassword(), admin.getCreateTime());
+    }
+
+    @Override
+    @DSTransactional
+    @DataPermission(enable = false)
+    public TenantCredentialRespVO resetTenantCredential(Long tenantId) {
+        TenantDO tenant = validateUpdateTenant(tenantId);
+        String clientId = StrUtil.blankToDefault(tenant.getClientId(), generateClientId(tenant.getCode()));
+        String rawSecret = generateClientSecret();
+        tenantMapper.updateById(new TenantDO().setId(tenantId)
+                .setClientId(clientId)
+                .setClientSecret(passwordEncoder.encode(rawSecret)));
+        return new TenantCredentialRespVO(tenantId, clientId, rawSecret);
+    }
+
+    @Override
+    @DataPermission(enable = false)
+    public TenantCredentialRespVO getTenantCredential(Long tenantId) {
+        TenantDO tenant = getTenant(tenantId);
+        if (tenant == null) {
+            throw exception(TENANT_NOT_EXISTS);
+        }
+        if (StrUtil.isBlank(tenant.getClientId())) {
+            throw exception(TENANT_CLIENT_NOT_CONFIGURED);
+        }
+        return new TenantCredentialRespVO(tenantId, tenant.getClientId(), null);
+    }
+
+    @Override
+    public TenantDO authenticateClient(String clientId, String clientSecret) {
+        if (StrUtil.isBlank(clientId) || StrUtil.isBlank(clientSecret)) {
+            throw exception(TENANT_CLIENT_BAD_CREDENTIALS);
+        }
+        TenantDO tenant = tenantMapper.selectByClientId(clientId);
+        if (tenant == null || StrUtil.isBlank(tenant.getClientSecret())
+                || !passwordEncoder.matches(clientSecret, tenant.getClientSecret())) {
+            throw exception(TENANT_CLIENT_BAD_CREDENTIALS);
+        }
+        validTenant(tenant.getId());
+        return tenant;
     }
 
     @Override
@@ -173,22 +181,9 @@ public class TenantServiceImpl implements TenantService {
     @DataPermission(enable = false)
     public TenantAdminAccountRespVO generateTenantAdmin(Long tenantId) {
         TenantDO tenant = validateUpdateTenant(tenantId);
-        TenantPackageDO tenantPackage = tenantPackageService.validTenantPackage(tenant.getPackageId());
-        String password = generateAdminPassword();
-        AtomicReference<TenantAdminAccountRespVO> resultRef = new AtomicReference<>();
-        TenantUtils.execute(tenantId, () -> {
-            // 获取（或创建）租户管理员角色
-            Long roleId = getOrCreateTenantAdminRoleId(tenantPackage);
-            // 序号按当前租户已有管理员递增：A001、A002...
-            String username = buildNextAdminUsername(tenant.getName());
-            Long userId = createUser(roleId, username, password, tenant.getContactName(), tenant.getContactMobile());
-            userMapper.update(null, new LambdaUpdateWrapper<AdminUserDO>()
-                    .set(AdminUserDO::getPlainPassword, password)
-                    .eq(AdminUserDO::getId, userId));
-            AdminUserDO user = userMapper.selectById(userId);
-            resultRef.set(new TenantAdminAccountRespVO(userId, username, password, user.getCreateTime()));
-        });
-        return resultRef.get();
+        BizTenantAdminDO admin = createBizTenantAdmin(tenant, LocalDateTime.now());
+        return new TenantAdminAccountRespVO(admin.getId(), admin.getUsername(),
+                admin.getPassword(), admin.getCreateTime());
     }
 
     @Override
@@ -198,48 +193,80 @@ public class TenantServiceImpl implements TenantService {
         if (tenant == null) {
             throw exception(TENANT_NOT_EXISTS);
         }
-        AtomicReference<List<TenantAdminAccountRespVO>> resultRef = new AtomicReference<>();
-        TenantUtils.execute(tenantId, () -> {
-            List<AdminUserDO> users = userMapper.selectList(new LambdaQueryWrapperX<AdminUserDO>()
-                    .likeRight(AdminUserDO::getUsername, "admin-")
-                    .orderByAsc(AdminUserDO::getCreateTime)
-                    .orderByAsc(AdminUserDO::getId));
-            List<TenantAdminAccountRespVO> list = new ArrayList<>(users.size());
-            for (AdminUserDO user : users) {
-                list.add(new TenantAdminAccountRespVO(user.getId(), user.getUsername(),
-                        user.getPlainPassword(), user.getCreateTime()));
-            }
-            resultRef.set(list);
-        });
-        return resultRef.get();
-    }
-
-    private Long createUser(Long roleId, String username, String password, String nickname, String mobile) {
-        Long userId = userService.createUser(TenantConvert.INSTANCE.convert02(
-                username, password, StrUtil.blankToDefault(nickname, "管理员"), mobile));
-        permissionService.assignUserRole(userId, singleton(roleId));
-        return userId;
-    }
-
-    private Long createRole(TenantPackageDO tenantPackage) {
-        RoleSaveReqVO reqVO = new RoleSaveReqVO();
-        reqVO.setName(RoleCodeEnum.TENANT_ADMIN.getName()).setCode(RoleCodeEnum.TENANT_ADMIN.getCode())
-                .setSort(0).setRemark("系统自动生成");
-        Long roleId = roleService.createRole(reqVO, RoleTypeEnum.SYSTEM.getType());
-        permissionService.assignRoleMenu(roleId, tenantPackage.getMenuIds());
-        return roleId;
-    }
-
-    private Long getOrCreateTenantAdminRoleId(TenantPackageDO tenantPackage) {
-        List<RoleDO> roles = roleService.getRoleListByStatus(singleton(CommonStatusEnum.ENABLE.getStatus()));
-        RoleDO adminRole = CollUtil.findOne(roles,
-                role -> Objects.equals(role.getCode(), RoleCodeEnum.TENANT_ADMIN.getCode()));
-        if (adminRole != null) {
-            return adminRole.getId();
+        List<BizTenantAdminDO> admins = bizTenantAdminMapper.selectListByTenantId(tenantId);
+        List<TenantAdminAccountRespVO> list = new ArrayList<>(admins.size());
+        for (BizTenantAdminDO admin : admins) {
+            list.add(new TenantAdminAccountRespVO(admin.getId(), admin.getUsername(),
+                    admin.getPassword(), admin.getCreateTime()));
         }
-        return createRole(tenantPackage);
+        return list;
     }
 
+    /**
+     * 创建 B 端管理员账号（写入 system_biz_tenant_admin）
+     */
+    private BizTenantAdminDO createBizTenantAdmin(TenantDO tenant, LocalDateTime createTime) {
+        String username = buildNextAdminUsername(tenant.getId(), tenant.getName());
+        String password = generateAdminPassword();
+        BizTenantAdminDO admin = BizTenantAdminDO.builder()
+                .tenantId(tenant.getId())
+                .username(username)
+                .password(password)
+                .build();
+        bizTenantAdminMapper.insert(admin);
+        if (createTime != null) {
+            bizTenantAdminMapper.update(null, new LambdaUpdateWrapper<BizTenantAdminDO>()
+                    .set(BizTenantAdminDO::getCreateTime, createTime)
+                    .eq(BizTenantAdminDO::getId, admin.getId()));
+            admin.setCreateTime(createTime);
+        }
+        return admin;
+    }
+
+    /**
+     * 管理员账号：admin-{医院名称拼音首字母}A{序号}
+     * 序号按当前租户隔离递增：A001、A002...
+     */
+    private String buildNextAdminUsername(Long tenantId, String hospitalName) {
+        String initials = getHospitalNameInitials(hospitalName);
+        String prefix = "admin-" + initials + "A";
+        List<BizTenantAdminDO> users = bizTenantAdminMapper.selectListByTenantIdAndUsernamePrefix(tenantId, prefix);
+        int next = 1;
+        for (BizTenantAdminDO user : users) {
+            Matcher matcher = ADMIN_USERNAME_SEQ_PATTERN.matcher(user.getUsername());
+            if (matcher.matches() && user.getUsername().startsWith(prefix)) {
+                next = Math.max(next, Integer.parseInt(matcher.group(1)) + 1);
+            }
+        }
+        if (next > 999) {
+            throw exception(TENANT_CODE_EXCEED);
+        }
+        return StrUtil.maxLength(prefix + String.format("%03d", next), 30);
+    }
+
+    private static String getHospitalNameInitials(String hospitalName) {
+        if (StrUtil.isBlank(hospitalName)) {
+            return "hosp";
+        }
+        String firstLetter = PinyinUtil.getFirstLetter(hospitalName, "");
+        if (StrUtil.isBlank(firstLetter)) {
+            return "hosp";
+        }
+        String initials = firstLetter.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
+        return StrUtil.blankToDefault(StrUtil.maxLength(initials, 16), "hosp");
+    }
+
+    private String generateClientId(String code) {
+        return "biz_" + StrUtil.blankToDefault(code, "t").toLowerCase() + "_" + IdUtil.fastSimpleUUID().substring(0, 8);
+    }
+
+    private static String generateClientSecret() {
+        return RandomUtil.randomString(RANDOM_CHARS, CLIENT_SECRET_LENGTH);
+    }
+
+    private static String generateAdminPassword() {
+        return RandomUtil.randomString(RANDOM_CHARS, ADMIN_PASSWORD_LENGTH);
+    }
     /**
      * 生成下一个创建编号：A001、A002...
      */
@@ -258,65 +285,15 @@ public class TenantServiceImpl implements TenantService {
         return String.format("A%03d", next);
     }
 
-    /**
-     * 管理员账号：admin-{医院名称拼音首字母}A{序号}
-     * <p>
-     * 序号按<strong>当前租户</strong>隔离递增：该租户下第一个为 A001，第二个为 A002...
-     * 须在 {@link TenantUtils#execute} 租户上下文中调用。
-     */
-    private String buildNextAdminUsername(String hospitalName) {
-        String initials = getHospitalNameInitials(hospitalName);
-        String prefix = "admin-" + initials + "A";
-        List<AdminUserDO> users = userMapper.selectList(new LambdaQueryWrapperX<AdminUserDO>()
-                .likeRight(AdminUserDO::getUsername, prefix));
-        int next = 1;
-        for (AdminUserDO user : users) {
-            Matcher matcher = ADMIN_USERNAME_SEQ_PATTERN.matcher(user.getUsername());
-            if (matcher.matches()) {
-                // 再校验是否同一首字母前缀，避免跨医院误匹配
-                if (user.getUsername().startsWith(prefix)) {
-                    next = Math.max(next, Integer.parseInt(matcher.group(1)) + 1);
-                }
-            }
-        }
-        if (next > 999) {
-            throw exception(TENANT_CODE_EXCEED);
-        }
-        String username = prefix + String.format("%03d", next);
-        return StrUtil.maxLength(username, 30);
-    }
-
-    private static String getHospitalNameInitials(String hospitalName) {
-        if (StrUtil.isBlank(hospitalName)) {
-            return "hosp";
-        }
-        String firstLetter = PinyinUtil.getFirstLetter(hospitalName, "");
-        if (StrUtil.isBlank(firstLetter)) {
-            return "hosp";
-        }
-        // 仅保留字母数字，小写（与前端展示一致，如 admin-cyyiyA001）
-        String initials = firstLetter.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
-        return StrUtil.blankToDefault(StrUtil.maxLength(initials, 16), "hosp");
-    }
-
-    private static String generateAdminPassword() {
-        return RandomUtil.randomString(ADMIN_PASSWORD_CHARS, ADMIN_PASSWORD_LENGTH);
-    }
-
     @Override
-    @DSTransactional // 多数据源，使用 @DSTransactional 保证本地事务，以及数据源的切换
+    @DSTransactional
     public void updateTenant(TenantSaveReqVO updateReqVO) {
         Assert.notNull(updateReqVO.getId(), "租户编号不能为空");
-        // 校验存在
         TenantDO tenant = validateUpdateTenant(updateReqVO.getId());
-        // 校验租户名称是否重复
         validTenantNameDuplicate(updateReqVO.getName(), updateReqVO.getId());
-        // 校验租户域名是否重复
         validTenantWebsiteDuplicate(updateReqVO.getWebsites(), updateReqVO.getId());
-        // 校验套餐被禁用
-        TenantPackageDO tenantPackage = tenantPackageService.validTenantPackage(updateReqVO.getPackageId());
+        tenantPackageService.validTenantPackage(updateReqVO.getPackageId());
 
-        // 仅更新编辑页字段，避免误清空联系人/账号数/创建编号等
         TenantDO updateObj = new TenantDO();
         updateObj.setId(updateReqVO.getId());
         updateObj.setName(updateReqVO.getName());
@@ -324,7 +301,6 @@ public class TenantServiceImpl implements TenantService {
         updateObj.setServiceUrl(updateReqVO.getServiceUrl());
         updateObj.setPackageId(updateReqVO.getPackageId());
         updateObj.setExpireTime(updateReqVO.getExpireTime());
-        // 可选字段：有传才更新
         if (updateReqVO.getContactName() != null) {
             updateObj.setContactName(updateReqVO.getContactName());
         }
@@ -341,9 +317,10 @@ public class TenantServiceImpl implements TenantService {
             updateObj.setWebsites(updateReqVO.getWebsites());
         }
         tenantMapper.updateById(updateObj);
-        // 如果套餐发生变化，则修改其角色的权限
+        // 套餐变更不再同步本库 role_menu，B 端拉取开放接口即可
         if (ObjectUtil.notEqual(tenant.getPackageId(), updateReqVO.getPackageId())) {
-            updateTenantRoleMenu(tenant.getId(), tenantPackage.getMenuIds());
+            log.info("[updateTenant][租户({}) 套餐从 {} 变更为 {}，由 B 端拉取最新配置]",
+                    tenant.getId(), tenant.getPackageId(), updateReqVO.getPackageId());
         }
     }
 
@@ -352,7 +329,6 @@ public class TenantServiceImpl implements TenantService {
         if (tenant == null) {
             return;
         }
-        // 如果 id 为空，说明不用比较是否为相同名字的租户
         if (id == null) {
             throw exception(TENANT_NAME_DUPLICATE, name);
         }
@@ -368,7 +344,7 @@ public class TenantServiceImpl implements TenantService {
         websites.forEach(website -> {
             List<TenantDO> tenants = tenantMapper.selectListByWebsite(website);
             if (excludeId != null) {
-                tenants.removeIf(tenant -> tenant.getId().equals(excludeId));
+                tenants.removeIf(t -> t.getId().equals(excludeId));
             }
             if (CollUtil.isNotEmpty(tenants)) {
                 throw exception(TENANT_WEBSITE_DUPLICATE, website);
@@ -379,42 +355,19 @@ public class TenantServiceImpl implements TenantService {
     @Override
     @DSTransactional
     public void updateTenantRoleMenu(Long tenantId, Set<Long> menuIds) {
-        TenantUtils.execute(tenantId, () -> {
-            // 获得所有角色
-            List<RoleDO> roles = roleService.getRoleList();
-            roles.forEach(role -> Assert.isTrue(tenantId.equals(role.getTenantId()), "角色({}/{}) 租户不匹配",
-                    role.getId(), role.getTenantId(), tenantId)); // 兜底校验
-            // 重新分配每个角色的权限
-            roles.forEach(role -> {
-                // 如果是租户管理员，重新分配其权限为租户套餐的权限
-                if (Objects.equals(role.getCode(), RoleCodeEnum.TENANT_ADMIN.getCode())) {
-                    permissionService.assignRoleMenu(role.getId(), menuIds);
-                    log.info("[updateTenantRoleMenu][租户管理员({}/{}) 的权限修改为({})]", role.getId(), role.getTenantId(), menuIds);
-                    return;
-                }
-                // 如果是其他角色，则去掉超过套餐的权限
-                Set<Long> roleMenuIds = permissionService.getRoleMenuListByRoleId(role.getId());
-                roleMenuIds = CollUtil.intersectionDistinct(roleMenuIds, menuIds);
-                permissionService.assignRoleMenu(role.getId(), roleMenuIds);
-                log.info("[updateTenantRoleMenu][角色({}/{}) 的权限修改为({})]", role.getId(), role.getTenantId(), roleMenuIds);
-            });
-        });
+        // 本平台已关闭多租户运行时；保留方法以兼容旧调用，不再修改本库角色菜单
+        log.info("[updateTenantRoleMenu][跳过本库同步 tenantId={} menuIds={}]", tenantId, menuIds);
     }
 
     @Override
     public void deleteTenant(Long id) {
-        // 校验存在
         validateUpdateTenant(id);
-        // 删除
         tenantMapper.deleteById(id);
     }
 
     @Override
     public void deleteTenantList(List<Long> ids) {
-        // 1. 校验存在
         ids.forEach(this::validateUpdateTenant);
-
-        // 2. 批量删除
         tenantMapper.deleteByIds(ids);
     }
 
@@ -423,7 +376,6 @@ public class TenantServiceImpl implements TenantService {
         if (tenant == null) {
             throw exception(TENANT_NOT_EXISTS);
         }
-        // 内置租户，不允许删除
         if (isSystemTenant(tenant)) {
             throw exception(TENANT_CAN_NOT_UPDATE_SYSTEM);
         }
@@ -468,31 +420,25 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public void handleTenantInfo(TenantInfoHandler handler) {
-        // 如果禁用，则不执行逻辑
         if (isTenantDisable()) {
             return;
         }
-        // 获得租户
         TenantDO tenant = getTenant(TenantContextHolder.getRequiredTenantId());
-        // 执行处理器
         handler.handle(tenant);
     }
 
     @Override
     public void handleTenantMenu(TenantMenuHandler handler) {
-        // 如果禁用，则不执行逻辑
         if (isTenantDisable()) {
             return;
         }
-        // 获得租户，然后获得菜单
         TenantDO tenant = getTenant(TenantContextHolder.getRequiredTenantId());
         Set<Long> menuIds;
-        if (isSystemTenant(tenant)) { // 系统租户，菜单是全量的
+        if (isSystemTenant(tenant)) {
             menuIds = CollectionUtils.convertSet(menuService.getMenuList(), MenuDO::getId);
         } else {
             menuIds = tenantPackageService.getTenantPackage(tenant.getPackageId()).getMenuIds();
         }
-        // 执行处理器
         handler.handle(menuIds);
     }
 

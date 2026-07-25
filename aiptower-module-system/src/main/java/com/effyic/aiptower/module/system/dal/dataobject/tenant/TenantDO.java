@@ -97,5 +97,13 @@ public class TenantDO extends BaseDO {
      * 账号数量
      */
     private Integer accountCount;
+    /**
+     * B 端对接 ClientId
+     */
+    private String clientId;
+    /**
+     * B 端对接 ClientSecret（BCrypt 哈希）
+     */
+    private String clientSecret;
 
 }

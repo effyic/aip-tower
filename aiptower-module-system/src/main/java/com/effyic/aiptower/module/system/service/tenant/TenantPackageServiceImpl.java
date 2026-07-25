@@ -7,7 +7,6 @@ import com.effyic.aiptower.framework.common.pojo.PageResult;
 import com.effyic.aiptower.framework.common.util.object.BeanUtils;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackagePageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackageSaveReqVO;
-import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantDO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantPackageDO;
 import com.effyic.aiptower.module.system.dal.mysql.tenant.TenantPackageMapper;
 import com.baomidou.dynamic.datasource.annotation.DSTransactional;
@@ -38,10 +37,15 @@ public class TenantPackageServiceImpl implements TenantPackageService {
     @Lazy // 避免循环依赖的报错
     private TenantService tenantService;
 
+    @Resource
+    private BizMenuService bizMenuService;
+
     @Override
     public Long createTenantPackage(TenantPackageSaveReqVO createReqVO) {
         // 校验套餐名是否重复
         validateTenantPackageNameUnique(null, createReqVO.getName());
+        // 校验 B 端菜单
+        bizMenuService.validateBizMenuIds(createReqVO.getMenuIds());
         // 插入
         TenantPackageDO tenantPackage = BeanUtils.toBean(createReqVO, TenantPackageDO.class);
         tenantPackageMapper.insert(tenantPackage);
@@ -53,17 +57,14 @@ public class TenantPackageServiceImpl implements TenantPackageService {
     @DSTransactional // 多数据源，使用 @DSTransactional 保证本地事务，以及数据源的切换
     public void updateTenantPackage(TenantPackageSaveReqVO updateReqVO) {
         // 校验存在
-        TenantPackageDO tenantPackage = validateTenantPackageExists(updateReqVO.getId());
+        validateTenantPackageExists(updateReqVO.getId());
         // 校验套餐名是否重复
         validateTenantPackageNameUnique(updateReqVO.getId(), updateReqVO.getName());
-        // 更新
+        // 校验 B 端菜单
+        bizMenuService.validateBizMenuIds(updateReqVO.getMenuIds());
+        // 更新（不再同步本库 role_menu，B 端通过开放接口拉取最新配置）
         TenantPackageDO updateObj = BeanUtils.toBean(updateReqVO, TenantPackageDO.class);
         tenantPackageMapper.updateById(updateObj);
-        // 如果菜单发生变化，则修改每个租户的菜单
-        if (!CollUtil.isEqualList(tenantPackage.getMenuIds(), updateReqVO.getMenuIds())) {
-            List<TenantDO> tenants = tenantService.getTenantListByPackageId(tenantPackage.getId());
-            tenants.forEach(tenant -> tenantService.updateTenantRoleMenu(tenant.getId(), updateReqVO.getMenuIds()));
-        }
     }
 
     @Override

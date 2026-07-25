@@ -5,7 +5,6 @@ import com.effyic.aiptower.framework.common.pojo.PageResult;
 import com.effyic.aiptower.framework.test.core.ut.BaseDbUnitTest;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackagePageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.tenant.vo.packages.TenantPackageSaveReqVO;
-import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantDO;
 import com.effyic.aiptower.module.system.dal.dataobject.tenant.TenantPackageDO;
 import com.effyic.aiptower.module.system.dal.mysql.tenant.TenantPackageMapper;
 import jakarta.annotation.Resource;
@@ -24,7 +23,9 @@ import static com.effyic.aiptower.framework.test.core.util.RandomUtils.*;
 import static com.effyic.aiptower.module.system.enums.ErrorCodeConstants.*;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +45,8 @@ public class TenantPackageServiceImplTest extends BaseDbUnitTest {
 
     @MockitoBean
     private TenantService tenantService;
+    @MockitoBean
+    private BizMenuService bizMenuService;
 
     @Test
     public void testCreateTenantPackage_success() {
@@ -59,6 +62,7 @@ public class TenantPackageServiceImplTest extends BaseDbUnitTest {
         // 校验记录的属性是否正确
         TenantPackageDO tenantPackage = tenantPackageMapper.selectById(tenantPackageId);
         assertPojoEquals(reqVO, tenantPackage, "id");
+        verify(bizMenuService).validateBizMenuIds(eq(reqVO.getMenuIds()));
     }
 
     @Test
@@ -72,21 +76,15 @@ public class TenantPackageServiceImplTest extends BaseDbUnitTest {
             o.setId(dbTenantPackage.getId()); // 设置更新的 ID
             o.setStatus(randomCommonStatus());
         });
-        // mock 方法
-        Long tenantId01 = randomLongId();
-        Long tenantId02 = randomLongId();
-        when(tenantService.getTenantListByPackageId(eq(reqVO.getId()))).thenReturn(
-                asList(randomPojo(TenantDO.class, o -> o.setId(tenantId01)),
-                        randomPojo(TenantDO.class, o -> o.setId(tenantId02))));
 
         // 调用
         tenantPackageService.updateTenantPackage(reqVO);
         // 校验是否更新正确
         TenantPackageDO tenantPackage = tenantPackageMapper.selectById(reqVO.getId()); // 获取最新的
         assertPojoEquals(reqVO, tenantPackage);
-        // 校验调用租户的菜单
-        verify(tenantService).updateTenantRoleMenu(eq(tenantId01), eq(reqVO.getMenuIds()));
-        verify(tenantService).updateTenantRoleMenu(eq(tenantId02), eq(reqVO.getMenuIds()));
+        // 不再同步本库 role_menu
+        verify(bizMenuService).validateBizMenuIds(eq(reqVO.getMenuIds()));
+        verify(tenantService, never()).updateTenantRoleMenu(any(), any());
     }
 
     @Test

@@ -110,12 +110,24 @@ public interface ErrorCodeConstants {
     ErrorCode TENANT_NAME_DUPLICATE = new ErrorCode(1_002_015_004, "名字为【{}】的租户已存在");
     ErrorCode TENANT_WEBSITE_DUPLICATE = new ErrorCode(1_002_015_005, "域名为【{}】的租户已存在");
     ErrorCode TENANT_CODE_EXCEED = new ErrorCode(1_002_015_006, "租户创建编号已用尽，请联系管理员");
+    ErrorCode TENANT_CLIENT_BAD_CREDENTIALS = new ErrorCode(1_002_015_007, "ClientId 或 ClientSecret 不正确");
+    ErrorCode TENANT_CLIENT_NOT_CONFIGURED = new ErrorCode(1_002_015_008, "租户未配置对接凭证");
+    ErrorCode BIZ_OPEN_TOKEN_INVALID = new ErrorCode(1_002_015_009, "访问令牌无效或已过期");
 
     // ========== 租户套餐 1-002-016-000 ==========
     ErrorCode TENANT_PACKAGE_NOT_EXISTS = new ErrorCode(1_002_016_000, "租户套餐不存在");
     ErrorCode TENANT_PACKAGE_USED = new ErrorCode(1_002_016_001, "租户正在使用该套餐，请给租户重新设置套餐后再尝试删除");
     ErrorCode TENANT_PACKAGE_DISABLE = new ErrorCode(1_002_016_002, "名字为【{}】的租户套餐已被禁用");
     ErrorCode TENANT_PACKAGE_NAME_DUPLICATE = new ErrorCode(1_002_016_003, "已经存在该名字的租户套餐");
+    ErrorCode TENANT_PACKAGE_MENU_INVALID = new ErrorCode(1_002_016_004, "套餐关联了不存在的 B 端菜单：{}");
+
+    // ========== B端菜单 1-002-017-000 ==========
+    ErrorCode BIZ_MENU_NAME_DUPLICATE = new ErrorCode(1_002_017_000, "已经存在该名字的 B 端菜单");
+    ErrorCode BIZ_MENU_PARENT_NOT_EXISTS = new ErrorCode(1_002_017_001, "父菜单不存在");
+    ErrorCode BIZ_MENU_PARENT_ERROR = new ErrorCode(1_002_017_002, "不能设置自己为父菜单");
+    ErrorCode BIZ_MENU_NOT_EXISTS = new ErrorCode(1_002_017_003, "B 端菜单不存在");
+    ErrorCode BIZ_MENU_EXISTS_CHILDREN = new ErrorCode(1_002_017_004, "存在子菜单，无法删除");
+    ErrorCode BIZ_MENU_PARENT_NOT_DIR_OR_MENU = new ErrorCode(1_002_017_005, "父菜单的类型必须是目录或者菜单");
 
     // ========== 社交用户 1-002-018-000 ==========
     ErrorCode SOCIAL_USER_AUTH_FAILURE = new ErrorCode(1_002_018_000, "社交授权失败，原因是：{}");

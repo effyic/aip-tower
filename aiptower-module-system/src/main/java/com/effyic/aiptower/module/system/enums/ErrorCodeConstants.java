@@ -46,6 +46,9 @@ public interface ErrorCodeConstants {
     ErrorCode USER_IMPORT_INIT_PASSWORD = new ErrorCode(1_002_003_009, "初始密码不能为空");
     ErrorCode USER_MOBILE_NOT_EXISTS = new ErrorCode(1_002_003_010, "该手机号尚未注册");
     ErrorCode USER_REGISTER_DISABLED = new ErrorCode(1_002_003_011, "注册功能已关闭");
+    ErrorCode OPS_USER_MENUS_EMPTY = new ErrorCode(1_002_003_012, "请至少选择一个菜单权限");
+    ErrorCode OPS_USER_SHADOW_ROLE_NOT_EXISTS = new ErrorCode(1_002_003_013, "运营用户影子角色不存在");
+    ErrorCode OPS_USER_LAST_CANNOT_DELETE = new ErrorCode(1_002_003_014, "不能删除最后一个拥有「运营用户管理」菜单的账号");
 
     // ========== 部门模块 1-002-004-000 ==========
     ErrorCode DEPT_NAME_DUPLICATE = new ErrorCode(1_002_004_000, "已经存在该名字的部门");

@@ -33,7 +33,6 @@ import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -99,7 +98,7 @@ public class TenantController {
 
     @PostMapping("/create")
     @Operation(summary = "创建 B 端租户", description = "自动生成对接凭证 + 默认管理员账号")
-    @PreAuthorize("@ss.hasPermission('system:tenant:create')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:create')")
     public CommonResult<TenantCreateRespVO> createTenant(@Valid @RequestBody TenantSaveReqVO createReqVO) {
         return success(tenantService.createTenant(createReqVO));
     }
@@ -107,7 +106,7 @@ public class TenantController {
     @PostMapping("/reset-credential")
     @Operation(summary = "重置 B 端对接凭证", description = "重新生成 clientSecret，明文仅本次返回；与管理员账号无关")
     @Parameter(name = "id", description = "租户编号", required = true, example = "1024")
-    @PreAuthorize("@ss.hasPermission('system:tenant:update')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:update')")
     public CommonResult<TenantCredentialRespVO> resetTenantCredential(@RequestParam("id") Long id) {
         return success(tenantService.resetTenantCredential(id));
     }
@@ -115,7 +114,7 @@ public class TenantController {
     @GetMapping("/get-credential")
     @Operation(summary = "查询 B 端对接凭证", description = "仅返回 clientId，不含 secret")
     @Parameter(name = "id", description = "租户编号", required = true, example = "1024")
-    @PreAuthorize("@ss.hasPermission('system:tenant:query')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:query')")
     public CommonResult<TenantCredentialRespVO> getTenantCredential(@RequestParam("id") Long id) {
         return success(tenantService.getTenantCredential(id));
     }
@@ -124,7 +123,7 @@ public class TenantController {
     @Operation(summary = "一键生成 B 端管理员账号",
             description = "账号规则：admin-{医院拼音首字母}A001，序号按租户隔离递增；密码 10 位随机字母数字，明文落库供列表与 B 端拉取")
     @Parameter(name = "id", description = "租户编号", required = true, example = "1024")
-    @PreAuthorize("@ss.hasPermission('system:tenant:update')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:update')")
     public CommonResult<TenantAdminAccountRespVO> generateTenantAdmin(@RequestParam("id") Long id) {
         return success(tenantService.generateTenantAdmin(id));
     }
@@ -132,14 +131,14 @@ public class TenantController {
     @GetMapping("/admin-list")
     @Operation(summary = "B 端管理员账号列表", description = "返回初始账号、明文初始密码、创建时间")
     @Parameter(name = "id", description = "租户编号", required = true, example = "1024")
-    @PreAuthorize("@ss.hasPermission('system:tenant:query')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:query')")
     public CommonResult<List<TenantAdminAccountRespVO>> getTenantAdminList(@RequestParam("id") Long id) {
         return success(tenantService.getTenantAdminList(id));
     }
 
     @PutMapping("/update")
     @Operation(summary = "编辑租户", description = "编辑医院名称、医院等级、有效期、套餐版本、服务地址；创建编号与默认管理员账号不变")
-    @PreAuthorize("@ss.hasPermission('system:tenant:update')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:update')")
     public CommonResult<Boolean> updateTenant(@Valid @RequestBody TenantSaveReqVO updateReqVO) {
         tenantService.updateTenant(updateReqVO);
         return success(true);
@@ -148,7 +147,7 @@ public class TenantController {
     @DeleteMapping("/delete")
     @Operation(summary = "删除租户")
     @Parameter(name = "id", description = "编号", required = true, example = "1024")
-    @PreAuthorize("@ss.hasPermission('system:tenant:delete')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:delete')")
     public CommonResult<Boolean> deleteTenant(@RequestParam("id") Long id) {
         tenantService.deleteTenant(id);
         return success(true);
@@ -157,7 +156,7 @@ public class TenantController {
     @DeleteMapping("/delete-list")
     @Parameter(name = "ids", description = "编号列表", required = true)
     @Operation(summary = "批量删除租户")
-    @PreAuthorize("@ss.hasPermission('system:tenant:delete')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:delete')")
     public CommonResult<Boolean> deleteTenantList(@RequestParam("ids") List<Long> ids) {
         tenantService.deleteTenantList(ids);
         return success(true);
@@ -166,7 +165,7 @@ public class TenantController {
     @GetMapping("/get")
     @Operation(summary = "获得租户")
     @Parameter(name = "id", description = "编号", required = true, example = "1024")
-    @PreAuthorize("@ss.hasPermission('system:tenant:query')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:query')")
     public CommonResult<TenantRespVO> getTenant(@RequestParam("id") Long id) {
         TenantDO tenant = tenantService.getTenant(id);
         TenantRespVO respVO = BeanUtils.toBean(tenant, TenantRespVO.class);
@@ -176,7 +175,7 @@ public class TenantController {
 
     @GetMapping("/page")
     @Operation(summary = "获得租户分页")
-    @PreAuthorize("@ss.hasPermission('system:tenant:query')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:query')")
     public CommonResult<PageResult<TenantRespVO>> getTenantPage(@Valid TenantPageReqVO pageVO) {
         PageResult<TenantDO> pageResult = tenantService.getTenantPage(pageVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
@@ -189,7 +188,7 @@ public class TenantController {
 
     @GetMapping("/export-excel")
     @Operation(summary = "导出租户 Excel")
-    @PreAuthorize("@ss.hasPermission('system:tenant:export')")
+    // @PreAuthorize("@ss.hasPermission('system:tenant:export')")
     @ApiAccessLog(operateType = EXPORT)
     public void exportTenantExcel(@Valid TenantPageReqVO exportReqVO, HttpServletResponse response) throws IOException {
         exportReqVO.setPageSize(PageParam.PAGE_SIZE_NONE);

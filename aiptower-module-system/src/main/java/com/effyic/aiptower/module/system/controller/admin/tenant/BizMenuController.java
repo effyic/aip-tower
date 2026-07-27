@@ -14,7 +14,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,14 +33,14 @@ public class BizMenuController {
 
     @PostMapping("/create")
     @Operation(summary = "创建 B 端菜单")
-    @PreAuthorize("@ss.hasPermission('system:biz-menu:create')")
+    // @PreAuthorize("@ss.hasPermission('system:biz-menu:create')")
     public CommonResult<Long> createBizMenu(@Valid @RequestBody BizMenuSaveReqVO createReqVO) {
         return success(bizMenuService.createBizMenu(createReqVO));
     }
 
     @PutMapping("/update")
     @Operation(summary = "修改 B 端菜单")
-    @PreAuthorize("@ss.hasPermission('system:biz-menu:update')")
+    // @PreAuthorize("@ss.hasPermission('system:biz-menu:update')")
     public CommonResult<Boolean> updateBizMenu(@Valid @RequestBody BizMenuSaveReqVO updateReqVO) {
         bizMenuService.updateBizMenu(updateReqVO);
         return success(true);
@@ -50,7 +49,7 @@ public class BizMenuController {
     @DeleteMapping("/delete")
     @Operation(summary = "删除 B 端菜单")
     @Parameter(name = "id", description = "菜单编号", required = true, example = "1024")
-    @PreAuthorize("@ss.hasPermission('system:biz-menu:delete')")
+    // @PreAuthorize("@ss.hasPermission('system:biz-menu:delete')")
     public CommonResult<Boolean> deleteBizMenu(@RequestParam("id") Long id) {
         bizMenuService.deleteBizMenu(id);
         return success(true);
@@ -59,7 +58,7 @@ public class BizMenuController {
     @DeleteMapping("/delete-list")
     @Operation(summary = "批量删除 B 端菜单")
     @Parameter(name = "ids", description = "编号列表", required = true)
-    @PreAuthorize("@ss.hasPermission('system:biz-menu:delete')")
+    // @PreAuthorize("@ss.hasPermission('system:biz-menu:delete')")
     public CommonResult<Boolean> deleteBizMenuList(@RequestParam("ids") List<Long> ids) {
         bizMenuService.deleteBizMenuList(ids);
         return success(true);
@@ -67,7 +66,7 @@ public class BizMenuController {
 
     @GetMapping("/list")
     @Operation(summary = "获取 B 端菜单列表", description = "用于【B端菜单管理】界面")
-    @PreAuthorize("@ss.hasPermission('system:biz-menu:query')")
+    // @PreAuthorize("@ss.hasPermission('system:biz-menu:query')")
     public CommonResult<List<BizMenuRespVO>> getBizMenuList(BizMenuListReqVO reqVO) {
         List<BizMenuDO> list = bizMenuService.getBizMenuList(reqVO);
         list.sort(Comparator.comparing(BizMenuDO::getSort));
@@ -92,7 +91,7 @@ public class BizMenuController {
 
     @GetMapping("/get")
     @Operation(summary = "获取 B 端菜单信息")
-    @PreAuthorize("@ss.hasPermission('system:biz-menu:query')")
+    // @PreAuthorize("@ss.hasPermission('system:biz-menu:query')")
     public CommonResult<BizMenuRespVO> getBizMenu(@RequestParam("id") Long id) {
         return success(BeanUtils.toBean(bizMenuService.getBizMenu(id), BizMenuRespVO.class));
     }

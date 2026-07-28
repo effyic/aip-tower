@@ -115,6 +115,9 @@ public class OpsUserServiceImpl implements OpsUserService {
         if (createReqVO.getStatus() != null
                 && !Objects.equals(createReqVO.getStatus(), CommonStatusEnum.ENABLE.getStatus())) {
             adminUserService.updateUserStatus(userId, createReqVO.getStatus());
+        } else {
+            // 确保 updater 落库为当前操作人（与 creator 一致）；仅改状态时 updateUserStatus 已会填充
+            touchUserUpdater(userId);
         }
         Long shadowRoleId = createShadowRole(userId, createReqVO.getUsername());
         permissionService.assignUserRole(userId, singleton(shadowRoleId));
@@ -127,14 +130,21 @@ public class OpsUserServiceImpl implements OpsUserService {
     public void updateOpsUser(OpsUserSaveReqVO updateReqVO) {
         validateOpsUserAccessible(updateReqVO.getId());
         Set<Long> menuIds = normalizeMenuIds(updateReqVO.getMenuIds());
+        boolean userTouched = false;
         if (updateReqVO.getStatus() != null) {
             adminUserService.updateUserStatus(updateReqVO.getId(), updateReqVO.getStatus());
+            userTouched = true;
         }
         if (StrUtil.isNotBlank(updateReqVO.getPassword())) {
             adminUserService.updateUserPassword(updateReqVO.getId(), updateReqVO.getPassword());
+            userTouched = true;
         }
         RoleDO shadowRole = requireShadowRole(updateReqVO.getId());
         permissionService.assignRoleMenu(shadowRole.getId(), menuIds);
+        // 仅改菜单时也要刷新更新人/更新时间
+        if (!userTouched) {
+            touchUserUpdater(updateReqVO.getId());
+        }
     }
 
     @Override
@@ -221,6 +231,15 @@ public class OpsUserServiceImpl implements OpsUserService {
             MapUtils.findAndThen(userMap, NumberUtils.parseLong(item.getUpdater()),
                     updater -> item.setUpdaterName(updater.getNickname()));
         }
+    }
+
+    /** 写入当前登录用户为更新人 */
+    private void touchUserUpdater(Long userId) {
+        Long loginUserId = getLoginUserId();
+        if (loginUserId == null) {
+            return;
+        }
+        adminUserMapper.updateById(new AdminUserDO().setId(userId).setUpdater(loginUserId.toString()));
     }
 
     private Long createShadowRole(Long userId, String username) {

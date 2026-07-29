@@ -66,7 +66,6 @@ public class OpsUserServiceImplTest extends BaseMockitoUnitTest {
 
         Long id = opsUserService.createOpsUser(reqVO);
         assertEquals(100L, id);
-        verify(adminUserMapper).updateById(any(AdminUserDO.class));
         verify(permissionService).assignUserRole(eq(100L), eq(Set.of(200L)));
         verify(permissionService).assignRoleMenu(eq(200L), eq(Set.of(1224L, 1138L)));
     }

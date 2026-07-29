@@ -135,6 +135,9 @@ public class OpsUserServiceImpl implements OpsUserService {
         }
         RoleDO shadowRole = requireShadowRole(updateReqVO.getId());
         permissionService.assignRoleMenu(shadowRole.getId(), menuIds);
+        // 运营用户以 system_users 为聚合根展示更新人；菜单只改关联表时也 update 主表，
+        // 由 MetaObjectHandler 填充 updater/updateTime（对齐 AdminUserService.updateUser）
+        adminUserMapper.updateById(new AdminUserDO().setId(updateReqVO.getId()));
     }
 
     @Override

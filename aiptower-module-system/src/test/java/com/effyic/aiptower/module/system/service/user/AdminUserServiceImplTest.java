@@ -2,6 +2,7 @@ package com.effyic.aiptower.module.system.service.user;
 
 import cn.hutool.core.util.RandomUtil;
 import com.effyic.aiptower.framework.common.enums.CommonStatusEnum;
+import com.effyic.aiptower.framework.common.enums.UserTypeEnum;
 import com.effyic.aiptower.framework.common.exception.ServiceException;
 import com.effyic.aiptower.framework.common.pojo.PageResult;
 import com.effyic.aiptower.framework.common.util.collection.ArrayUtils;
@@ -301,6 +302,9 @@ public class AdminUserServiceImplTest extends BaseDbUnitTest {
         assertNull(userMapper.selectById(userId));
         // 校验调用次数
         verify(permissionService, times(1)).processUserDeleted(eq(userId));
+        // 删除用户时需失效 Token，避免被删账号继续持有登录态
+        verify(oauth2TokenService, times(1)).removeAccessToken(eq(userId),
+                eq(UserTypeEnum.ADMIN.getValue()));
     }
 
     @Test

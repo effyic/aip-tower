@@ -276,8 +276,10 @@ public class AdminUserServiceImpl implements AdminUserService {
         userMapper.deleteById(id);
         // 2.2 删除用户关联数据
         permissionService.processUserDeleted(id);
-        // 2.2 删除用户岗位
+        // 2.3 删除用户岗位
         userPostMapper.deleteByUserId(id);
+        // 2.4 删除 Token，迫使用户端下次请求收到 401 并优雅退出登录
+        oauth2TokenService.removeAccessToken(id, UserTypeEnum.ADMIN.getValue());
 
         // 3. 记录操作日志上下文
         LogRecordContext.putVariable("user", user);
@@ -289,10 +291,11 @@ public class AdminUserServiceImpl implements AdminUserService {
         // 1. 批量删除用户
         userMapper.deleteByIds(ids);
 
-        // 2. 批量删除用户关联数据
+        // 2. 批量删除用户关联数据，并失效其登录态
         ids.forEach(id -> {
             permissionService.processUserDeleted(id);
             userPostMapper.deleteByUserId(id);
+            oauth2TokenService.removeAccessToken(id, UserTypeEnum.ADMIN.getValue());
         });
     }
 

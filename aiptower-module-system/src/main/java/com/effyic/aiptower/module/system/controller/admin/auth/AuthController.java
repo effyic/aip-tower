@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import static com.effyic.aiptower.framework.common.exception.enums.GlobalErrorCodeConstants.UNAUTHORIZED;
 import static com.effyic.aiptower.framework.common.pojo.CommonResult.success;
 import static com.effyic.aiptower.framework.common.util.collection.CollectionUtils.convertSet;
 import static com.effyic.aiptower.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
@@ -95,9 +96,11 @@ public class AuthController {
     @DataPermission(enable = false) // 忽略数据权限，避免因为过滤，导致无法查询用户。类似：https://t.zsxq.com/LHnrp
     public CommonResult<AuthPermissionInfoRespVO> getPermissionInfo() {
         // 1.1 获得用户信息
+        // 用户已删除/不存在时：勿返回 success(null)。前端对 data 未判空会直接读 permissions 导致白屏；
+        // 返回 401，走现有拦截器退出登录（与删除用户时清 Token 互补，作兜底）
         AdminUserDO user = userService.getUser(getLoginUserId());
         if (user == null) {
-            return success(null);
+            return CommonResult.error(UNAUTHORIZED);
         }
 
         // 1.2 获得角色列表

@@ -7,6 +7,7 @@ import com.effyic.aiptower.framework.common.pojo.PageResult;
 import com.effyic.aiptower.framework.common.util.collection.MapUtils;
 import com.effyic.aiptower.framework.common.util.number.NumberUtils;
 import com.effyic.aiptower.framework.common.util.object.BeanUtils;
+import com.effyic.aiptower.framework.datapermission.core.util.DataPermissionUtils;
 import com.effyic.aiptower.module.system.controller.admin.opsuser.vo.OpsUserPageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.opsuser.vo.OpsUserRespVO;
 import com.effyic.aiptower.module.system.controller.admin.opsuser.vo.OpsUserSaveReqVO;
@@ -217,7 +218,9 @@ public class OpsUserServiceImpl implements OpsUserService {
                 userIds.add(updaterId);
             }
         }
-        Map<Long, AdminUserDO> userMap = adminUserService.getUserMap(userIds);
+        // 按指定 id 回填展示名，关闭数据权限，避免仅本人范围查不到创建人/更新人
+        Map<Long, AdminUserDO> userMap = DataPermissionUtils.executeIgnore(
+                () -> adminUserService.getUserMap(userIds));
         for (OpsUserRespVO item : list) {
             MapUtils.findAndThen(userMap, NumberUtils.parseLong(item.getCreator()),
                     creator -> item.setCreatorName(creator.getNickname()));

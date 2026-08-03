@@ -4,10 +4,10 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.effyic.aiptower.framework.common.enums.CommonStatusEnum;
 import com.effyic.aiptower.framework.common.pojo.PageResult;
+import com.effyic.aiptower.framework.common.util.collection.CollectionUtils;
 import com.effyic.aiptower.framework.common.util.collection.MapUtils;
 import com.effyic.aiptower.framework.common.util.number.NumberUtils;
 import com.effyic.aiptower.framework.common.util.object.BeanUtils;
-import com.effyic.aiptower.framework.datapermission.core.util.DataPermissionUtils;
 import com.effyic.aiptower.module.system.controller.admin.opsuser.vo.OpsUserPageReqVO;
 import com.effyic.aiptower.module.system.controller.admin.opsuser.vo.OpsUserRespVO;
 import com.effyic.aiptower.module.system.controller.admin.opsuser.vo.OpsUserSaveReqVO;
@@ -218,9 +218,12 @@ public class OpsUserServiceImpl implements OpsUserService {
                 userIds.add(updaterId);
             }
         }
-        // 按指定 id 回填展示名，关闭数据权限，避免仅本人范围查不到创建人/更新人
-        Map<Long, AdminUserDO> userMap = DataPermissionUtils.executeIgnore(
-                () -> adminUserService.getUserMap(userIds));
+        if (CollUtil.isEmpty(userIds)) {
+            return;
+        }
+        // 含已删除、跨租户：creator 可能指向已删的 admin（tenant 也可能不同）
+        Map<Long, AdminUserDO> userMap = CollectionUtils.convertMap(
+                adminUserMapper.selectByIdsForDisplay(userIds), AdminUserDO::getId);
         for (OpsUserRespVO item : list) {
             MapUtils.findAndThen(userMap, NumberUtils.parseLong(item.getCreator()),
                     creator -> item.setCreatorName(creator.getNickname()));
